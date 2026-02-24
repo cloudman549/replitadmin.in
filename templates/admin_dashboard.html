@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupermanStore - Admin Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        .navbar { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .navbar h1 { font-size: 1.8em; }
+        .logout-btn { background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); }
+        .pending-alert { position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); z-index: 1000; font-weight: bold; display: none; animation: pulse 2s infinite; }
+        .pending-alert.active { display: block; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .notification { position: fixed; top: 80px; right: 20px; background: white; padding: 20px 25px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1001; display: none; border-left: 5px solid #10b981; min-width: 300px; }
+        .notification.active { display: block; animation: slideIn 0.5s ease-out; }
+        .notification.vip { border-left: 5px solid #f59e0b; }
+        .notification.auto { border-left: 5px solid #3b82f6; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .notification h3 { color: #10b981; margin-bottom: 10px; }
+        .notification.vip h3 { color: #f59e0b; }
+        .notification.auto h3 { color: #3b82f6; }
+        .notification p { color: #666; margin: 5px 0; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); flex-wrap: wrap; }
+        .tab-btn { flex: 1; min-width: 150px; padding: 15px; background: transparent; border: none; font-size: 1.1em; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.3s; color: #666; }
+        .tab-btn.active { background: linear-gradient(135deg, #1e3c72 0%, #7e22ce 100%); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .stat-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; }
+        .stat-card:hover { transform: scale(1.02); }
+        .stat-card h3 { color: #666; font-size: 0.85em; margin-bottom: 10px; text-transform: uppercase; }
+        .stat-card .value { font-size: 2.5em; font-weight: bold; color: #1e3c72; }
+        .stat-card.verified .value { color: #059669; }
+        .stat-card.pending .value { color: #ef4444; }
+        .stat-card.auto .value { color: #3b82f6; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .card h2 { color: #333; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 600; }
+        .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .btn { background: linear-gradient(135deg, #1e3c72 0%, #7e22ce 100%); color: white; border: none; padding: 12px 30px; font-size: 1em; font-weight: bold; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
+        .btn:hover { transform: scale(1.05); }
+        .btn-danger { background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); }
+        .btn-approve { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border: none; padding: 8px 16px; font-size: 0.9em; font-weight: bold; border-radius: 6px; cursor: pointer; margin-right: 5px; transition: transform 0.2s; }
+        .btn-approve:hover { transform: scale(1.05); }
+        .btn-reject { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 8px 16px; font-size: 0.9em; font-weight: bold; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
+        .btn-reject:hover { transform: scale(1.05); }
+        .btn-small { padding: 5px 10px; font-size: 0.8em; }
+        .copy-btn { background: #e0e0e0; border: none; padding: 5px 10px; margin-left: 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
+        .copy-btn:hover { background: #d0d0d0; }
+        .utr-cell { cursor: pointer; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .table th { background: #f8f9fa; padding: 15px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #e0e0e0; }
+        .table td { padding: 15px; border-bottom: 1px solid #f0f0f0; }
+        .table tr:hover { background: #f8f9fa; }
+        .table tr.pending { background: #fee2e2 !important; font-weight: bold; border-left: 4px solid #ef4444; }
+        .table tr.pending td { color: #b91c1c; }
+        .table tr.vip-order { background: #fef3c7 !important; border-left: 4px solid #f59e0b; }
+        .table tr.auto-approved { background: #dbeafe !important; border-left: 4px solid #3b82f6; }
+        .badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-verified { background: #d1fae5; color: #065f46; }
+        .badge-pending { background: #fee2e2; color: #b91c1c; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-rejected { background: #f3e8ff; color: #6b21a8; }
+        .badge-vip { background: #fef3c7; color: #92400e; }
+        .badge-auto { background: #dbeafe; color: #1e40af; }
+        .success-msg, .error-msg { padding: 15px; border-radius: 8px; margin: 15px 0; display: none; }
+        .success-msg { background: #d4edda; color: #155724; }
+        .error-msg { background: #f8d7da; color: #721c24; }
+        .success-msg.active, .error-msg.active { display: block; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .type-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .type-tab-btn { flex: 1; padding: 12px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .type-tab-btn.active { background: linear-gradient(135deg, #1e3c72 0%, #7e22ce 100%); color: white; }
+        .type-tab-btn.verified.active { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); padding-top: 60px; }
+        .modal-content { background-color: white; margin: 5% auto; padding: 25px; border: 1px solid #888; width: 85%; max-width: 900px; border-radius: 12px; }
+        .close { color: #aaa; float: right; font-size: 36px; font-weight: bold; cursor: pointer; }
+        .close:hover, .close:focus { color: #000; text-decoration: none; cursor: pointer; }
+        .payment-status { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 0.9em; font-weight: 600; margin-left: 12px; }
+        .payment-status.configured { background: #d1fae5; color: #065f46; }
+        .payment-status.not-configured { background: #fee2e2; color: #b91c1c; }
+        .vip-utr-item { background: #f9fafb; padding: 16px; margin: 12px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #f59e0b; }
+        .vip-utr-item.inactive { opacity: 0.55; border-left-color: #9ca3af; }
+        .generate-utr-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 10px 20px; font-size: 0.9em; font-weight: bold; border-radius: 6px; cursor: pointer; margin-left: 10px; transition: transform 0.2s; }
+        .generate-utr-btn:hover { transform: scale(1.05); }
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .tabs { flex-direction: column; }
+            .tab-btn { width: 100%; }
+            .container { padding: 20px 12px; }
+            .navbar { padding: 15px 20px; }
+            .card { padding: 20px; }
+            .table th, .table td { padding: 10px; font-size: 0.9em; }
+            .pending-alert, .notification { right: 10px; left: 10px; min-width: auto; padding: 12px 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="pending-alert" id="pendingAlert">⚠️ <span id="pendingCount">0</span> Pending Orders!</div>
+    <div class="notification" id="newOrderNotification">
+        <h3 id="notifTitle">🔔 New Order Received!</h3>
+        <p><strong>Type:</strong> <span id="notifType"></span></p>
+        <p><strong>Quantity:</strong> <span id="notifQty"></span></p>
+        <p><strong>Amount:</strong> ₹<span id="notifAmount"></span></p>
+        <p id="notifExtra"></p>
+    </div>
+
+    <div class="navbar">
+        <h1>🦸‍♂️ SupermanStore Admin</h1>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card"><h3>Normal IDs Added Today</h3><div class="value" id="normalTotal">0</div></div>
+            <div class="stat-card" onclick="showAvailableIDs('normal')"><h3>Normal Available</h3><div class="value" id="normalAvailable">0</div></div>
+            <div class="stat-card verified"><h3>Verified IDs Added Today</h3><div class="value" id="verifiedTotal">0</div></div>
+            <div class="stat-card verified" onclick="showAvailableIDs('verified')"><h3>Verified Available</h3><div class="value" id="verifiedAvailable">0</div></div>
+            <div class="stat-card"><h3>Today's Orders (Approved)</h3><div class="value" id="totalOrders">0</div></div>
+            <div class="stat-card"><h3>Today's Revenue</h3><div class="value" id="totalRevenue">₹0</div></div>
+            <div class="stat-card auto"><h3>Auto-Approved Today</h3><div class="value" id="autoApprovedToday">0</div></div>
+            <div class="stat-card pending" onclick="switchTab('orders', event)"><h3>Pending Orders</h3><div class="value" id="pendingOrders">0</div></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('settings', event)">⚙️ Settings</button>
+            <button class="tab-btn" onclick="switchTab('payment', event)">💳 Payment Gateway</button>
+            <button class="tab-btn" onclick="switchTab('vip', event)">👑 VIP UTRs</button>
+            <button class="tab-btn" onclick="switchTab('ids', event)">📋 IDs Management</button>
+            <button class="tab-btn" onclick="switchTab('orders', event)">🛒 Orders</button>
+            <button class="tab-btn" onclick="switchTab('history', event)">📊 History</button>
+        </div>
+
+        <div class="tab-content active" id="settingsTab">
+            <div class="card">
+                <h2>Price Settings</h2>
+                <div class="success-msg" id="settingsSuccess"></div>
+                <div class="error-msg" id="settingsError"></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Normal ID Price (₹):</label><input type="number" id="normalPrice" min="1"></div>
+                    <div class="form-group"><label>Verified ID Price (₹):</label><input type="number" id="verifiedPrice" min="1"></div>
+                </div>
+                <div class="form-group"><label>QR Code URL/Base64:</label><textarea id="qrCode" placeholder="Enter QR code URL or base64 data"></textarea></div>
+                <button class="btn" onclick="updateSettings()">Save Settings</button>
+            </div>
+
+            <div class="card">
+                <h2>Contact & Payment Settings</h2>
+                <div class="success-msg" id="contactSuccess"></div>
+                <div class="error-msg" id="contactError"></div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>UPI ID:</label>
+                        <input type="text" id="upiId" placeholder="yourname@paytm">
+                        <small style="color: #666;">Shown below QR code on payment page</small>
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp Link:</label>
+                        <input type="text" id="whatsappLink" placeholder="https://wa.me/...">
+                        <small style="color: #666;">Customer support WhatsApp</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Telegram Link:</label>
+                        <input type="text" id="telegramLink" placeholder="https://t.me/...">
+                        <small style="color: #666;">Customer support Telegram</small>
+                    </div>
+                </div>
+                <button class="btn" onclick="updateContactSettings()">Save Contact Settings</button>
+            </div>
+
+            <div class="card">
+                <h2>Announcements / Instructions for Customers</h2>
+                <div class="success-msg" id="announceSuccess"></div>
+                <div class="error-msg" id="announceError"></div>
+                <div class="form-group"><label>Message:</label><textarea id="announcement" placeholder="Enter news, updates or instructions here..."></textarea></div>
+                <button class="btn" onclick="updateAnnouncement()">Save Announcement</button>
+            </div>
+            <div class="card"><h2>Current Announcement</h2><p id="currentAnnounce" style="white-space: pre-wrap;">No announcement</p></div>
+
+            <div class="card">
+                <h2>Change Admin Credentials</h2>
+                <div class="success-msg" id="credsSuccess"></div>
+                <div class="error-msg" id="credsError"></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>New Username:</label><input type="text" id="newUsername"></div>
+                    <div class="form-group"><label>New Password:</label><input type="password" id="newPassword"></div>
+                </div>
+                <button class="btn" onclick="changeCredentials()">Update Credentials</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="paymentTab">
+            <div class="card">
+                <h2>BharatPe Payment Gateway Settings <span class="payment-status" id="paymentStatus">Not Configured</span></h2>
+                <div class="success-msg" id="paymentSuccess"></div>
+                <div class="error-msg" id="paymentError"></div>
+                <p style="color: #666; margin-bottom: 20px;">Configure BharatPe API for auto verification.</p>
+                <div class="form-group"><label>BharatPe API Token:</label><input type="text" id="bharatpeToken" placeholder="Enter token"></div>
+                <div class="form-group"><label>BharatPe Merchant ID:</label><input type="text" id="bharatpeMid" placeholder="Enter Merchant ID"></div>
+                <button class="btn" onclick="updatePaymentSettings()">Save Payment Settings</button>
+            </div>
+            <div class="card">
+                <h2>Payment Gateway Status</h2>
+                <p id="paymentStatusDetails" style="color: #666;">Loading...</p>
+            </div>
+        </div>
+
+        <div class="tab-content" id="vipTab">
+            <div class="card">
+                <h2>VIP UTR Management 👑</h2>
+                <p style="color: #666; margin-bottom: 15px;">VIP UTRs require manual approval even if payment is verified.</p>
+                <div class="success-msg" id="vipSuccess"></div>
+                <div class="error-msg" id="vipError"></div>
+                <div class="form-group">
+                    <label>Add VIP UTR:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="newVipUtr" placeholder="Enter UTR or generate random" style="flex: 1;">
+                        <button class="generate-utr-btn" onclick="generateAndSetVipUtr()">Generate UTR</button>
+                        <button class="btn" onclick="addVipUtr()">Add VIP UTR</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>VIP UTR List (<span id="vipCount">0</span>)</h2>
+                <div id="vipUtrList"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="idsTab">
+            <div class="type-tabs">
+                <button class="type-tab-btn active" onclick="switchIDType('normal', event)">Normal IDs</button>
+                <button class="type-tab-btn verified" onclick="switchIDType('verified', event)">Verified IDs</button>
+            </div>
+            <div class="card">
+                <h2 id="addIDTitle">Add New Normal ID</h2>
+                <div class="success-msg" id="idSuccess"></div>
+                <div class="error-msg" id="idError"></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>User ID:</label><input type="text" id="newUserID"></div>
+                    <div class="form-group"><label>Password:</label><input type="text" id="newPassword2"></div>
+                    <div class="form-group"><label>Email (Optional):</label><input type="email" id="newEmail"></div>
+                    <div class="form-group"><label>Email Password (Optional):</label><input type="text" id="newEmailPassword"></div>
+                </div>
+                <button class="btn" onclick="addID()">Add ID</button>
+            </div>
+            <div class="card">
+                <h2 id="bulkAddTitle">Bulk Add Normal IDs</h2>
+                <div class="success-msg" id="bulkSuccess"></div>
+                <div class="error-msg" id="bulkError"></div>
+                <div class="form-group"><label>User IDs (One per line):</label><textarea id="bulkUserids" placeholder="one userid per line"></textarea></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Common Password:</label><input type="text" id="bulkPassword"></div>
+                    <div class="form-group"><label>Common Email (Optional):</label><input type="email" id="bulkEmail"></div>
+                    <div class="form-group"><label>Common Email Password (Optional):</label><input type="text" id="bulkEmailPass"></div>
+                </div>
+                <button class="btn" onclick="bulkAddIDs()">Bulk Add</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="ordersTab">
+            <div class="card">
+                <h2>Today's Orders</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Amount</th>
+                            <th>UTR</th>
+                            <th>Screenshot</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-content" id="historyTab">
+            <div class="card">
+                <h2>All Orders History</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Amount</th>
+                            <th>UTR</th>
+                            <th>Screenshot</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">×</span>
+            <h2 id="modalTitle">Available IDs</h2>
+            <table class="table">
+                <thead>
+                    <tr><th>User ID</th><th>Password</th><th>Email</th><th>Email Pass</th><th>Status</th><th>Action</th></tr>
+                </thead>
+                <tbody id="modalBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+let currentIDType = 'normal';
+let knownOrderIds = new Set();
+let isFirstLoad = true;
+let beepInterval = null;
+let audioContext = null;
+const editedOrders = new Map();
+
+function initAudio() {
+    if (!audioContext) {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.error('AudioContext failed', e);
+        }
+    }
+    if (audioContext?.state === 'suspended') audioContext.resume();
+    return !!audioContext;
+}
+
+function playBeepSound() {
+    if (!initAudio()) return;
+    try {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = 880;
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.4, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.35);
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.35);
+    } catch (e) {}
+    document.body.style.backgroundColor = '#fee2e2';
+    setTimeout(() => document.body.style.backgroundColor = '#f5f5f5', 180);
+}
+
+function showFullScreenNotification(order) {
+    const n = document.getElementById('newOrderNotification');
+    const isVip = !!order.is_vip;
+    document.getElementById('notifTitle').textContent = isVip ? '👑 VIP Order - Manual Approval Required!' : '🔔 New Order!';
+    document.getElementById('notifExtra').textContent = isVip ? '⚠️ VIP UTR detected - Auto-approval disabled' : '';
+    document.getElementById('notifType').textContent = order.type === 'normal' ? 'Normal ID' : 'Verified ID';
+    document.getElementById('notifQty').textContent = order.quantity;
+    document.getElementById('notifAmount').textContent = order.amount;
+    n.classList.toggle('vip', isVip);
+    n.classList.toggle('auto', !isVip && order.auto_approved);
+    n.classList.add('active');
+    if (beepInterval) clearInterval(beepInterval);
+    playBeepSound();
+    beepInterval = setInterval(playBeepSound, 4500);
+}
+
+function updatePendingAlert(count) {
+    const el = document.getElementById('pendingAlert');
+    document.getElementById('pendingCount').textContent = count;
+    el.classList.toggle('active', count > 0);
+}
+
+function switchTab(tabName, e) {
+    if (e) e.preventDefault();
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    const btn = e ? e.currentTarget : document.querySelector(`button[onclick*="switchTab('${tabName}'"]`);
+    if (btn) btn.classList.add('active');
+    document.getElementById(tabName + 'Tab').classList.add('active');
+    if (tabName === 'payment') loadPaymentStatus();
+    if (tabName === 'vip') loadVipUtrs();
+    if (tabName === 'orders') loadOrders();
+    if (tabName === 'history') loadHistory();
+}
+
+function switchIDType(type, e) {
+    if (e) e.preventDefault();
+    currentIDType = type;
+    document.querySelectorAll('.type-tab-btn').forEach(b => b.classList.remove('active'));
+    if (e) e.currentTarget.classList.add('active');
+    document.getElementById('addIDTitle').textContent = type === 'normal' ? 'Add New Normal ID' : 'Add New Verified ID';
+    document.getElementById('bulkAddTitle').textContent = type === 'normal' ? 'Bulk Add Normal IDs' : 'Bulk Add Verified IDs';
+}
+
+async function apiCall(url, method = 'GET', body = null) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json();
+}
+
+async function loadStats() {
+    try {
+        const s = await apiCall('/api/admin/stats');
+        document.getElementById('normalTotal').textContent = s.normal_total || 0;
+        document.getElementById('normalAvailable').textContent = s.normal_available || 0;
+        document.getElementById('verifiedTotal').textContent = s.verified_total || 0;
+        document.getElementById('verifiedAvailable').textContent = s.verified_available || 0;
+        document.getElementById('totalOrders').textContent = s.total_orders || 0;
+        document.getElementById('totalRevenue').textContent = '₹' + (s.total_revenue || 0);
+        document.getElementById('pendingOrders').textContent = s.pending_orders || 0;
+        document.getElementById('autoApprovedToday').textContent = s.auto_approved_today || 0;
+        updatePendingAlert(s.pending_orders || 0);
+        if (s.pending_orders === 0 && beepInterval) {
+            clearInterval(beepInterval);
+            beepInterval = null;
+            document.getElementById('newOrderNotification').classList.remove('active');
+        }
+    } catch (e) {
+        console.error('stats error', e);
+    }
+}
+
+async function loadConfig() {
+    try {
+        const c = await apiCall('/api/admin/config');
+        document.getElementById('normalPrice').value = c.normal_price || '';
+        document.getElementById('verifiedPrice').value = c.verified_price || '';
+        document.getElementById('qrCode').value = c.qr_code || '';
+        document.getElementById('announcement').value = c.announcement || '';
+        document.getElementById('currentAnnounce').textContent = c.announcement || 'No announcement';
+        document.getElementById('bharatpeToken').value = c.bharatpe_token || '';
+        document.getElementById('bharatpeMid').value = c.bharatpe_mid || '';
+        document.getElementById('upiId').value = c.upi_id || '';
+        document.getElementById('whatsappLink').value = c.whatsapp_link || '';
+        document.getElementById('telegramLink').value = c.telegram_link || '';
+    } catch (e) {
+        console.error('config load fail', e);
+    }
+}
+
+async function updateSettings() {
+    const s = document.getElementById('settingsSuccess');
+    const e = document.getElementById('settingsError');
+    s.classList.remove('active'); e.classList.remove('active');
+    try {
+        await apiCall('/api/admin/config', 'POST', {
+            normal_price: document.getElementById('normalPrice').value,
+            verified_price: document.getElementById('verifiedPrice').value,
+            qr_code: document.getElementById('qrCode').value
+        });
+        s.textContent = 'Settings saved successfully'; 
+        s.classList.add('active');
+        setTimeout(() => s.classList.remove('active'), 3000);
+    } catch (err) {
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function updateContactSettings() {
+    const s = document.getElementById('contactSuccess');
+    const e = document.getElementById('contactError');
+    s.classList.remove('active'); e.classList.remove('active');
+    try {
+        await apiCall('/api/admin/config', 'POST', {
+            upi_id: document.getElementById('upiId').value,
+            whatsapp_link: document.getElementById('whatsappLink').value,
+            telegram_link: document.getElementById('telegramLink').value
+        });
+        s.textContent = 'Contact settings saved successfully'; 
+        s.classList.add('active');
+        setTimeout(() => s.classList.remove('active'), 3000);
+    } catch (err) {
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function updateAnnouncement() {
+    const s = document.getElementById('announceSuccess');
+    const e = document.getElementById('announceError');
+    s.classList.remove('active'); e.classList.remove('active');
+    try {
+        const announcement = document.getElementById('announcement').value;
+        await apiCall('/api/admin/config', 'POST', { announcement });
+        document.getElementById('currentAnnounce').textContent = announcement || 'No announcement';
+        s.textContent = 'Announcement saved successfully'; 
+        s.classList.add('active');
+        setTimeout(() => s.classList.remove('active'), 3000);
+    } catch (err) {
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function updatePaymentSettings() {
+    const s = document.getElementById('paymentSuccess');
+    const e = document.getElementById('paymentError');
+    s.classList.remove('active'); e.classList.remove('active');
+    try {
+        await apiCall('/api/admin/config', 'POST', {
+            bharatpe_token: document.getElementById('bharatpeToken').value,
+            bharatpe_mid: document.getElementById('bharatpeMid').value
+        });
+        s.textContent = 'Payment settings saved successfully'; 
+        s.classList.add('active');
+        setTimeout(() => s.classList.remove('active'), 3000);
+        loadPaymentStatus();
+    } catch (err) {
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function loadPaymentStatus() {
+    try {
+        const c = await apiCall('/api/admin/config');
+        const statusEl = document.getElementById('paymentStatus');
+        const detailsEl = document.getElementById('paymentStatusDetails');
+        if (c.bharatpe_token && c.bharatpe_mid) {
+            statusEl.textContent = 'Configured';
+            statusEl.className = 'payment-status configured';
+            detailsEl.textContent = 'BharatPe payment gateway is configured and active. Auto-verification is enabled.';
+        } else {
+            statusEl.textContent = 'Not Configured';
+            statusEl.className = 'payment-status not-configured';
+            detailsEl.textContent = 'BharatPe token and merchant ID not configured. Manual verification mode is active.';
+        }
+    } catch (e) {
+        console.error('payment status fail', e);
+    }
+}
+
+function generateRandomUTR() {
+    const part1 = Math.floor(Math.random() * 900000000) + 100000000;
+    const part2 = Math.floor(Math.random() * 900) + 100;
+    return String(part1) + String(part2);
+}
+
+function generateAndSetVipUtr() {
+    const utr = generateRandomUTR();
+    document.getElementById('newVipUtr').value = utr;
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Copied: ' + text);
+    }).catch(() => {
+        alert('Copy failed');
+    });
+}
+
+async function loadVipUtrs() {
+    try {
+        const data = await apiCall('/api/admin/config');
+        const list = document.getElementById('vipUtrList');
+        const vipUtrs = Array.isArray(data.vip_utrs) ? data.vip_utrs : [];
+        document.getElementById('vipCount').textContent = vipUtrs.length;
+        if (vipUtrs.length === 0) {
+            list.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No VIP UTRs added yet</p>';
+            return;
+        }
+        list.innerHTML = vipUtrs.map(item => `
+            <div class="vip-utr-item ${item.active ? '' : 'inactive'}">
+                <div>
+                    <strong onclick="copyToClipboard('${item.utr}')" style="cursor: pointer; font-size: 1.1em; user-select: all; font-family: monospace;">${item.utr}</strong>
+                    <button class="copy-btn" onclick="copyToClipboard('${item.utr}')">Copy</button>
+                    <br>
+                    <small style="color: #666;">Added: ${new Date(item.added_date).toLocaleString('en-IN')}</small>
+                </div>
+                <div>
+                    <button class="btn-small btn-approve" onclick="toggleVipUtr('${item.utr}', ${!item.active})">${item.active ? 'Deactivate' : 'Activate'}</button>
+                    <button class="btn-small btn-reject" onclick="deleteVipUtr('${item.utr}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error('VIP UTRs load fail:', e);
+    }
+}
+
+async function addVipUtr() {
+    const s = document.getElementById('vipSuccess');
+    const e = document.getElementById('vipError');
+    s.classList.remove('active'); e.classList.remove('active');
+    const utr = document.getElementById('newVipUtr').value.trim();
+    if (!utr) {
+        e.textContent = 'Please enter UTR'; 
+        e.classList.add('active');
+        return;
+    }
+    try {
+        const config = await apiCall('/api/admin/config');
+        let vipUtrs = Array.isArray(config.vip_utrs) ? config.vip_utrs : [];
+        if (vipUtrs.find(v => v.utr === utr)) {
+            e.textContent = 'UTR already exists'; 
+            e.classList.add('active');
+            return;
+        }
+        vipUtrs.push({
+            utr: utr,
+            active: true,
+            added_date: new Date().toISOString()
+        });
+        await apiCall('/api/admin/config', 'POST', { vip_utrs: vipUtrs });
+        document.getElementById('newVipUtr').value = '';
+        setTimeout(async () => {
+            await loadVipUtrs();
+            s.textContent = 'VIP UTR added successfully'; 
+            s.classList.add('active');
+            setTimeout(() => s.classList.remove('active'), 3000);
+        }, 500);
+    } catch (err) {
+        console.error('Add VIP UTR error:', err);
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function toggleVipUtr(utr, activate) {
+    try {
+        const config = await apiCall('/api/admin/config');
+        const vipUtrs = config.vip_utrs || [];
+        const item = vipUtrs.find(v => v.utr === utr);
+        if (item) {
+            item.active = activate;
+            await apiCall('/api/admin/config', 'POST', { vip_utrs: vipUtrs });
+            loadVipUtrs();
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function deleteVipUtr(utr) {
+    if (!confirm('Delete this VIP UTR?')) return;
+    try {
+        const config = await apiCall('/api/admin/config');
+        const vipUtrs = (config.vip_utrs || []).filter(v => v.utr !== utr);
+        await apiCall('/api/admin/config', 'POST', { vip_utrs: vipUtrs });
+        loadVipUtrs();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function changeCredentials() {
+    const s = document.getElementById('credsSuccess');
+    const e = document.getElementById('credsError');
+    s.classList.remove('active'); e.classList.remove('active');
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newPassword').value.trim();
+    if (!username || !password) {
+        e.textContent = 'Both fields required'; 
+        e.classList.add('active');
+        return;
+    }
+    try {
+        await apiCall('/api/admin/config', 'POST', { admin_username: username, admin_password: password });
+        s.textContent = 'Credentials updated successfully'; 
+        s.classList.add('active');
+        setTimeout(() => s.classList.remove('active'), 3000);
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newPassword').value = '';
+    } catch (err) {
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function addID() {
+    const s = document.getElementById('idSuccess');
+    const e = document.getElementById('idError');
+    s.classList.remove('active'); e.classList.remove('active');
+    const userid = document.getElementById('newUserID').value.trim();
+    const password = document.getElementById('newPassword2').value.trim();
+    if (!userid || !password) {
+        e.textContent = 'User ID and Password required'; 
+        e.classList.add('active');
+        return;
+    }
+    try {
+        await apiCall('/api/admin/ids', 'POST', {
+            type: currentIDType,
+            userid,
+            password,
+            email: document.getElementById('newEmail').value.trim(),
+            email_password: document.getElementById('newEmailPassword').value.trim()
+        });
+        s.textContent = 'ID added successfully'; 
+        s.classList.add('active');
+        setTimeout(() => s.classList.remove('active'), 3000);
+        document.getElementById('newUserID').value = '';
+        document.getElementById('newPassword2').value = '';
+        document.getElementById('newEmail').value = '';
+        document.getElementById('newEmailPassword').value = '';
+        loadStats();
+    } catch (err) {
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function bulkAddIDs() {
+    const s = document.getElementById('bulkSuccess');
+    const e = document.getElementById('bulkError');
+    s.classList.remove('active'); e.classList.remove('active');
+    const userids = document.getElementById('bulkUserids').value.trim().split('\n').filter(x => x.trim());
+    const password = document.getElementById('bulkPassword').value.trim();
+    if (userids.length === 0 || !password) {
+        e.textContent = 'User IDs and Password required'; 
+        e.classList.add('active');
+        return;
+    }
+    try {
+        await apiCall('/api/admin/ids/bulk', 'POST', {
+            type: currentIDType,
+            userids,
+            password,
+            email: document.getElementById('bulkEmail').value.trim(),
+            email_password: document.getElementById('bulkEmailPass').value.trim()
+        });
+        s.textContent = `${userids.length} IDs added successfully`; 
+        s.classList.add('active');
+        setTimeout(() => s.classList.remove('active'), 3000);
+        document.getElementById('bulkUserids').value = '';
+        document.getElementById('bulkPassword').value = '';
+        document.getElementById('bulkEmail').value = '';
+        document.getElementById('bulkEmailPass').value = '';
+        loadStats();
+    } catch (err) {
+        e.textContent = 'Error: ' + err.message; 
+        e.classList.add('active');
+    }
+}
+
+async function showAvailableIDs(type) {
+    try {
+        const data = await apiCall(`/api/admin/ids/${type}`);
+        const modal = document.getElementById('modal');
+        const tbody = document.getElementById('modalBody');
+        document.getElementById('modalTitle').textContent = `Available ${type === 'normal' ? 'Normal' : 'Verified'} IDs`;
+        tbody.innerHTML = data.ids.map(id => `
+            <tr>
+                <td>${id.userid}</td>
+                <td>${id.password}</td>
+                <td>${id.email || 'N/A'}</td>
+                <td>${id.email_password || 'N/A'}</td>
+                <td><span class="badge ${id.sold ? 'badge-rejected' : 'badge-success'}">${id.sold ? 'Sold' : 'Available'}</span></td>
+                <td>${!id.sold ? `<button class="btn-small btn-reject" onclick="deleteSingleID('${id._id}', '${type}')">Delete</button>` : ''}</td>
+            </tr>
+        `).join('');
+        modal.style.display = 'block';
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function deleteSingleID(id, type) {
+    if (!confirm('Delete this ID?')) return;
+    try {
+        await apiCall(`/api/admin/ids/${id}`, 'DELETE');
+        showAvailableIDs(type);
+        loadStats();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function loadOrders() {
+    try {
+        const orders = await apiCall('/api/admin/orders');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayOrders = orders.filter(o => {
+            const orderDate = new Date(o.date);
+            orderDate.setHours(0, 0, 0, 0);
+            return orderDate.getTime() === today.getTime();
+        });
+        if (!isFirstLoad) {
+            todayOrders.filter(o => o.status === 'pending').forEach(o => {
+                if (!knownOrderIds.has(o._id)) {
+                    knownOrderIds.add(o._id);
+                    showFullScreenNotification(o);
+                }
+            });
+        } else {
+            todayOrders.forEach(o => knownOrderIds.add(o._id));
+            isFirstLoad = false;
+        }
+        const tbody = document.getElementById('ordersTableBody');
+        tbody.innerHTML = '';
+        if (todayOrders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 30px; color: #666;">No orders today</td></tr>';
+            return;
+        }
+        todayOrders.forEach(order => {
+            const row = document.createElement('tr');
+            const date = new Date(order.date).toLocaleString('en-IN');
+            const typeBadge = order.type === 'normal' ? '<span class="badge badge-info">Normal</span>' : '<span class="badge badge-verified">Verified</span>';
+            let statusBadge = '';
+            let actions = '';
+            if (order.status === 'pending') {
+                row.classList.add('pending');
+                if (order.is_vip) row.classList.add('vip-order');
+                statusBadge = '<span class="badge badge-pending">Pending</span>';
+                if (order.is_vip) statusBadge += ' <span class="badge badge-vip">VIP</span>';
+                actions = `
+                    <button class="btn-approve" onclick="approveOrder('${order._id}', ${order.amount})">Approve</button>
+                    <button class="btn-reject" onclick="rejectOrder('${order._id}')">Reject</button>
+                `;
+            } else if (order.status === 'approved') {
+                statusBadge = '<span class="badge badge-approved">Approved</span>';
+                if (order.auto_approved) statusBadge += ' <span class="badge badge-auto">Auto</span>';
+                actions = 'Delivered';
+            } else if (order.status === 'rejected') {
+                statusBadge = '<span class="badge badge-rejected">Rejected</span>';
+                actions = 'N/A';
+            }
+            const screenshot = order.screenshot_url ? `<a href="${order.screenshot_url}" target="_blank">View</a>` : 'N/A';
+            row.innerHTML = `
+                <td>#${order._id.slice(-6)}</td>
+                <td>${typeBadge}</td>
+                <td>${date}</td>
+                <td>${order.quantity}</td>
+                <td id="amount-${order._id}">₹${order.amount}${order.status === 'pending' ? `<button class="copy-btn" onclick="editAmount('${order._id}', ${order.amount}, '${order.type}')">Edit</button>` : ''}</td>
+                <td class="utr-cell" onclick="copyUTR('${order.utr}')">${order.utr} <button class="copy-btn">Copy</button></td>
+                <td>${screenshot}</td>
+                <td>${statusBadge}</td>
+                <td>${actions}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (e) {
+        console.error('orders load fail', e);
+    }
+}
+
+function copyUTR(text) {
+    navigator.clipboard.writeText(text).then(() => alert('UTR copied')).catch(() => alert('Copy failed'));
+}
+
+function editAmount(id, currAmt, type) {
+    const price = type === 'normal' ? Number(document.getElementById('normalPrice').value) : Number(document.getElementById('verifiedPrice').value);
+    if (!price) return alert('Price not set');
+    const newAmt = prompt(`Current: ₹${currAmt}\nEnter actual amount:`, currAmt);
+    if (newAmt === null) return;
+    const amt = Number(newAmt);
+    if (isNaN(amt) || amt <= 0) return alert('Invalid amount');
+    const qty = Math.floor(amt / price);
+    if (qty < 1) return alert('Amount too low');
+    if (confirm(`Received: ₹${amt}\nDeliver: ${qty} IDs\nConfirm?`)) {
+        document.getElementById(`amount-${id}`).innerHTML = `₹${amt} <small>(edited)</small>`;
+        editedOrders.set(id, {amount: amt, quantity: qty});
+    }
+}
+
+async function approveOrder(id, origAmt) {
+    const edit = editedOrders.get(id);
+    let payload = {};
+    let msg = 'Approve order?';
+    if (edit) {
+        payload = { edited_amount: edit.amount, edited_quantity: edit.quantity };
+        msg = `Edited → ₹${edit.amount} | Qty: ${edit.quantity}\nApprove?`;
+    }
+    if (!confirm(msg)) return;
+    try {
+        await apiCall(`/api/admin/orders/${id}/approve`, 'POST', payload);
+        editedOrders.delete(id);
+        alert('Order approved');
+        loadOrders();
+        loadStats();
+    } catch (e) {
+        alert('Approve failed: ' + e.message);
+    }
+}
+
+async function rejectOrder(id) {
+    if (!confirm('Reject order?')) return;
+    try {
+        await apiCall(`/api/admin/orders/${id}/reject`, 'POST');
+        alert('Order rejected');
+        loadOrders();
+        loadStats();
+    } catch (e) {
+        alert('Reject failed');
+    }
+}
+
+async function loadHistory() {
+    try {
+        const orders = await apiCall('/api/admin/orders');
+        const tbody = document.getElementById('historyTableBody');
+        tbody.innerHTML = '';
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: #666;">No orders in history</td></tr>';
+            return;
+        }
+        orders.forEach(order => {
+            const row = document.createElement('tr');
+            const date = new Date(order.date).toLocaleString('en-IN');
+            const typeBadge = order.type === 'normal' ? '<span class="badge badge-info">Normal</span>' : '<span class="badge badge-verified">Verified</span>';
+            let statusBadge = '';
+            if (order.status === 'pending') {
+                row.classList.add('pending');
+                if (order.is_vip) row.classList.add('vip-order');
+                statusBadge = '<span class="badge badge-pending">Pending</span>';
+                if (order.is_vip) statusBadge += ' <span class="badge badge-vip">VIP</span>';
+            } else if (order.status === 'approved') {
+                statusBadge = '<span class="badge badge-approved">Approved</span>';
+                if (order.auto_approved) statusBadge += ' <span class="badge badge-auto">Auto</span>';
+            } else if (order.status === 'rejected') {
+                statusBadge = '<span class="badge badge-rejected">Rejected</span>';
+            }
+            const screenshot = order.screenshot_url ? `<a href="${order.screenshot_url}" target="_blank">View</a>` : 'N/A';
+            row.innerHTML = `
+                <td>#${order._id.slice(-6)}</td>
+                <td>${typeBadge}</td>
+                <td>${date}</td>
+                <td>${order.quantity}</td>
+                <td>₹${order.amount}</td>
+                <td class="utr-cell" onclick="copyUTR('${order.utr}')">${order.utr} <button class="copy-btn">Copy</button></td>
+                <td>${screenshot}</td>
+                <td>${statusBadge}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (e) {
+        console.error('history load fail', e);
+    }
+}
+
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+
+function logout() {
+    window.location.href = '/admin/logout';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    ['click','touchstart','keydown'].forEach(ev => document.addEventListener(ev, initAudio, {once: true}));
+    loadStats();
+    loadConfig();
+    loadOrders();
+    loadPaymentStatus();
+    setInterval(() => {
+        loadStats();
+        loadOrders();
+    }, 15000);
+});
+
+window.onclick = e => {
+    if (e.target.id === 'modal') closeModal();
+};
+    </script>
+</body>
+</html>
