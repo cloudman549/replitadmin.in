@@ -81,7 +81,7 @@ def admin_login():
         return jsonify({'success': False, 'error': 'Invalid credentials'})
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))
-    return render_template('login.html')
+    return render_template('admin_login.html')
 
 @app.route('/admin/dashboard')
 @admin_required
