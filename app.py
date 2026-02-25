@@ -13,7 +13,7 @@ CORS(app)
 # MongoDB Connection
 MONGO_URI = "mongodb+srv://suresh9576sharma_db_user:dn3hXtnCq5NmLGXv@replit0.djpxcq9.mongodb.net/?appName=replit0"
 client = MongoClient(MONGO_URI)
-db = client['supermanstore']
+db = client['repltjimmy']
 
 # Collections
 config_collection = db['config']
@@ -29,8 +29,8 @@ def init_config():
                 'normal_price': 200,
                 'verified_price': 400,
                 'qr_code': '',
-                'admin_username': 'superman',
-                'admin_password': 'superman123',
+                'admin_username': 'jimmy',
+                'admin_password': 'jimmy123',
                 'announcement': '',
                 'bharatpe_token': '',
                 'bharatpe_mid': '',
