@@ -11,7 +11,7 @@ app.secret_key = 'admin-secret-key-change-this-to-something-secure'
 CORS(app)
 
 # MongoDB Connection
-MONGO_URI = "mongodb+srv://ravan_ext:Cloudman%40100@cluster0.cpuhyo1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = "mongodb+srv://suresh9576sharma_db_user:dn3hXtnCq5NmLGXv@replit0.djpxcq9.mongodb.net/?appName=replit0"
 client = MongoClient(MONGO_URI)
 db = client['supermanstore']
 
