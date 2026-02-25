@@ -2,113 +2,749 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SupermanStore - Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ReplitStore - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
-        .navbar { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .navbar h1 { font-size: 1.8em; }
-        .logout-btn { background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
-        .logout-btn:hover { background: rgba(255,255,255,0.3); }
-        .pending-alert { position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); z-index: 1000; font-weight: bold; display: none; animation: pulse 2s infinite; }
-        .pending-alert.active { display: block; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        .notification { position: fixed; top: 80px; right: 20px; background: white; padding: 20px 25px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1001; display: none; border-left: 5px solid #10b981; min-width: 300px; }
-        .notification.active { display: block; animation: slideIn 0.5s ease-out; }
-        .notification.vip { border-left: 5px solid #f59e0b; }
-        .notification.auto { border-left: 5px solid #3b82f6; }
-        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .notification h3 { color: #10b981; margin-bottom: 10px; }
-        .notification.vip h3 { color: #f59e0b; }
-        .notification.auto h3 { color: #3b82f6; }
-        .notification p { color: #666; margin: 5px 0; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 30px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); flex-wrap: wrap; }
-        .tab-btn { flex: 1; min-width: 150px; padding: 15px; background: transparent; border: none; font-size: 1.1em; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.3s; color: #666; }
-        .tab-btn.active { background: linear-gradient(135deg, #1e3c72 0%, #7e22ce 100%); color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; margin-bottom: 40px; }
-        .stat-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; }
-        .stat-card:hover { transform: scale(1.02); }
-        .stat-card h3 { color: #666; font-size: 0.85em; margin-bottom: 10px; text-transform: uppercase; }
-        .stat-card .value { font-size: 2.5em; font-weight: bold; color: #1e3c72; }
-        .stat-card.verified .value { color: #059669; }
-        .stat-card.pending .value { color: #ef4444; }
-        .stat-card.auto .value { color: #3b82f6; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .card h2 { color: #333; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 600; }
-        .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; }
-        .form-group textarea { min-height: 100px; resize: vertical; }
-        .btn { background: linear-gradient(135deg, #1e3c72 0%, #7e22ce 100%); color: white; border: none; padding: 12px 30px; font-size: 1em; font-weight: bold; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
-        .btn:hover { transform: scale(1.05); }
-        .btn-danger { background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); }
-        .btn-approve { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border: none; padding: 8px 16px; font-size: 0.9em; font-weight: bold; border-radius: 6px; cursor: pointer; margin-right: 5px; transition: transform 0.2s; }
-        .btn-approve:hover { transform: scale(1.05); }
-        .btn-reject { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 8px 16px; font-size: 0.9em; font-weight: bold; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
-        .btn-reject:hover { transform: scale(1.05); }
-        .btn-small { padding: 5px 10px; font-size: 0.8em; }
-        .copy-btn { background: #e0e0e0; border: none; padding: 5px 10px; margin-left: 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
-        .copy-btn:hover { background: #d0d0d0; }
-        .utr-cell { cursor: pointer; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table th { background: #f8f9fa; padding: 15px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #e0e0e0; }
-        .table td { padding: 15px; border-bottom: 1px solid #f0f0f0; }
-        .table tr:hover { background: #f8f9fa; }
-        .table tr.pending { background: #fee2e2 !important; font-weight: bold; border-left: 4px solid #ef4444; }
-        .table tr.pending td { color: #b91c1c; }
-        .table tr.vip-order { background: #fef3c7 !important; border-left: 4px solid #f59e0b; }
-        .table tr.auto-approved { background: #dbeafe !important; border-left: 4px solid #3b82f6; }
-        .badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
-        .badge-success { background: #d4edda; color: #155724; }
-        .badge-info { background: #d1ecf1; color: #0c5460; }
-        .badge-verified { background: #d1fae5; color: #065f46; }
-        .badge-pending { background: #fee2e2; color: #b91c1c; }
-        .badge-approved { background: #d1fae5; color: #065f46; }
-        .badge-rejected { background: #f3e8ff; color: #6b21a8; }
-        .badge-vip { background: #fef3c7; color: #92400e; }
-        .badge-auto { background: #dbeafe; color: #1e40af; }
-        .success-msg, .error-msg { padding: 15px; border-radius: 8px; margin: 15px 0; display: none; }
-        .success-msg { background: #d4edda; color: #155724; }
-        .error-msg { background: #f8d7da; color: #721c24; }
-        .success-msg.active, .error-msg.active { display: block; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-        .type-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .type-tab-btn { flex: 1; padding: 12px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
-        .type-tab-btn.active { background: linear-gradient(135deg, #1e3c72 0%, #7e22ce 100%); color: white; }
-        .type-tab-btn.verified.active { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); padding-top: 60px; }
-        .modal-content { background-color: white; margin: 5% auto; padding: 25px; border: 1px solid #888; width: 85%; max-width: 900px; border-radius: 12px; }
-        .close { color: #aaa; float: right; font-size: 36px; font-weight: bold; cursor: pointer; }
-        .close:hover, .close:focus { color: #000; text-decoration: none; cursor: pointer; }
-        .payment-status { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 0.9em; font-weight: 600; margin-left: 12px; }
-        .payment-status.configured { background: #d1fae5; color: #065f46; }
-        .payment-status.not-configured { background: #fee2e2; color: #b91c1c; }
-        .vip-utr-item { background: #f9fafb; padding: 16px; margin: 12px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #f59e0b; }
-        .vip-utr-item.inactive { opacity: 0.55; border-left-color: #9ca3af; }
-        .generate-utr-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 10px 20px; font-size: 0.9em; font-weight: bold; border-radius: 6px; cursor: pointer; margin-left: 10px; transition: transform 0.2s; }
-        .generate-utr-btn:hover { transform: scale(1.05); }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+        }
+        
+        .navbar { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 1rem 1.5rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .navbar h1 { 
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .navbar-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .logout-btn, .hard-reset-btn { 
+            background: rgba(255,255,255,0.2); 
+            color: white; 
+            border: 2px solid white; 
+            padding: 0.6rem 1.2rem; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .hard-reset-btn {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: #ff6b6b;
+        }
+        
+        .logout-btn:hover { 
+            background: rgba(255,255,255,0.3); 
+            transform: scale(1.05);
+        }
+        
+        .hard-reset-btn:hover {
+            background: rgba(239, 68, 68, 0.5);
+            transform: scale(1.05);
+        }
+        
+        .pending-alert { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            background: #ef4444; 
+            color: white; 
+            padding: 1rem 1.5rem; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); 
+            z-index: 1000; 
+            font-weight: bold; 
+            display: none; 
+            animation: pulse 2s infinite;
+        }
+        
+        .pending-alert.active { 
+            display: block; 
+        }
+        
+        @keyframes pulse { 
+            0%, 100% { transform: scale(1); } 
+            50% { transform: scale(1.05); } 
+        }
+        
+        .notification { 
+            position: fixed; 
+            top: 80px; 
+            right: 20px; 
+            background: white; 
+            padding: 1.2rem 1.5rem; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+            z-index: 1001; 
+            display: none; 
+            border-left: 5px solid #10b981; 
+            min-width: 280px;
+            max-width: 90vw;
+        }
+        
+        .notification.active { 
+            display: block; 
+            animation: slideIn 0.5s ease-out; 
+        }
+        
+        .notification.vip { 
+            border-left: 5px solid #f59e0b; 
+        }
+        
+        .notification.auto { 
+            border-left: 5px solid #3b82f6; 
+        }
+        
+        @keyframes slideIn { 
+            from { transform: translateX(400px); opacity: 0; } 
+            to { transform: translateX(0); opacity: 1; } 
+        }
+        
+        .notification h3 { 
+            color: #10b981; 
+            margin-bottom: 0.8rem;
+            font-size: 1rem;
+        }
+        
+        .notification.vip h3 { 
+            color: #f59e0b; 
+        }
+        
+        .notification.auto h3 { 
+            color: #3b82f6; 
+        }
+        
+        .notification p { 
+            color: #666; 
+            margin: 0.4rem 0;
+            font-size: 0.9rem;
+        }
+        
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 1.5rem 1rem; 
+        }
+        
+        .tabs { 
+            display: flex; 
+            gap: 0.5rem; 
+            margin-bottom: 1.5rem; 
+            background: white; 
+            padding: 0.8rem; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            flex-wrap: wrap;
+            overflow-x: auto;
+        }
+        
+        .tab-btn { 
+            flex: 1; 
+            min-width: 120px; 
+            padding: 0.9rem 0.8rem; 
+            background: transparent; 
+            border: none; 
+            font-size: 0.95rem; 
+            font-weight: 600; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            transition: all 0.3s; 
+            color: #666;
+            white-space: nowrap;
+        }
+        
+        .tab-btn.active { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+        }
+        
+        .tab-content { 
+            display: none; 
+        }
+        
+        .tab-content.active { 
+            display: block; 
+        }
+        
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 1rem; 
+            margin-bottom: 2rem; 
+        }
+        
+        .stat-card { 
+            background: white; 
+            padding: 1.5rem; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            cursor: pointer; 
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover { 
+            transform: scale(1.02); 
+        }
+        
+        .stat-card h3 { 
+            color: #666; 
+            font-size: 0.8rem; 
+            margin-bottom: 0.8rem; 
+            text-transform: uppercase;
+        }
+        
+        .stat-card .value { 
+            font-size: 2rem; 
+            font-weight: bold; 
+            color: #667eea;
+        }
+        
+        .stat-card.verified .value { 
+            color: #059669; 
+        }
+        
+        .stat-card.pending .value { 
+            color: #ef4444; 
+        }
+        
+        .stat-card.auto .value { 
+            color: #3b82f6; 
+        }
+        
+        .card { 
+            background: white; 
+            padding: 1.5rem; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            margin-bottom: 1.5rem; 
+        }
+        
+        .card h2 { 
+            color: #333; 
+            margin-bottom: 1.2rem; 
+            padding-bottom: 1rem; 
+            border-bottom: 2px solid #f0f0f0;
+            font-size: 1.3rem;
+        }
+        
+        .form-group { 
+            margin-bottom: 1.2rem; 
+        }
+        
+        .form-group label { 
+            display: block; 
+            margin-bottom: 0.5rem; 
+            color: #333; 
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .form-group input, .form-group textarea { 
+            width: 100%; 
+            padding: 0.9rem; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 8px; 
+            font-size: 0.95rem;
+        }
+        
+        .form-group textarea { 
+            min-height: 100px; 
+            resize: vertical; 
+        }
+        
+        .btn { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            border: none; 
+            padding: 0.9rem 1.8rem; 
+            font-size: 0.95rem; 
+            font-weight: bold; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover { 
+            transform: scale(1.05); 
+        }
+        
+        .btn-danger { 
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); 
+        }
+        
+        .btn-approve { 
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%); 
+            color: white; 
+            border: none; 
+            padding: 0.6rem 1rem; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-right: 0.4rem; 
+            transition: transform 0.2s;
+        }
+        
+        .btn-approve:hover { 
+            transform: scale(1.05); 
+        }
+        
+        .btn-reject { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+            color: white; 
+            border: none; 
+            padding: 0.6rem 1rem; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: transform 0.2s;
+        }
+        
+        .btn-reject:hover { 
+            transform: scale(1.05); 
+        }
+        
+        .btn-small { 
+            padding: 0.4rem 0.8rem; 
+            font-size: 0.8rem; 
+        }
+        
+        .copy-btn { 
+            background: #e0e0e0; 
+            border: none; 
+            padding: 0.4rem 0.8rem; 
+            margin-left: 0.6rem; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.75rem;
+        }
+        
+        .copy-btn:hover { 
+            background: #d0d0d0; 
+        }
+        
+        .utr-cell { 
+            cursor: pointer;
+            font-family: monospace;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        
+        .table { 
+            width: 100%; 
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+        
+        .table th { 
+            background: #f8f9fa; 
+            padding: 1rem 0.8rem; 
+            text-align: left; 
+            font-weight: 600; 
+            color: #333; 
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 0.9rem;
+        }
+        
+        .table td { 
+            padding: 1rem 0.8rem; 
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.85rem;
+        }
+        
+        .table tr:hover { 
+            background: #f8f9fa; 
+        }
+        
+        .table tr.pending { 
+            background: #fee2e2 !important; 
+            font-weight: bold; 
+            border-left: 4px solid #ef4444; 
+        }
+        
+        .table tr.pending td { 
+            color: #b91c1c; 
+        }
+        
+        .table tr.vip-order { 
+            background: #fef3c7 !important; 
+            border-left: 4px solid #f59e0b; 
+        }
+        
+        .table tr.auto-approved { 
+            background: #dbeafe !important; 
+            border-left: 4px solid #3b82f6; 
+        }
+        
+        .badge { 
+            display: inline-block; 
+            padding: 0.4rem 0.9rem; 
+            border-radius: 20px; 
+            font-size: 0.8rem; 
+            font-weight: 600;
+        }
+        
+        .badge-success { 
+            background: #d4edda; 
+            color: #155724; 
+        }
+        
+        .badge-info { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+        }
+        
+        .badge-verified { 
+            background: #d1fae5; 
+            color: #065f46; 
+        }
+        
+        .badge-pending { 
+            background: #fee2e2; 
+            color: #b91c1c; 
+        }
+        
+        .badge-approved { 
+            background: #d1fae5; 
+            color: #065f46; 
+        }
+        
+        .badge-rejected { 
+            background: #f3e8ff; 
+            color: #6b21a8; 
+        }
+        
+        .badge-vip { 
+            background: #fef3c7; 
+            color: #92400e; 
+        }
+        
+        .badge-auto { 
+            background: #dbeafe; 
+            color: #1e40af; 
+        }
+        
+        .success-msg, .error-msg { 
+            padding: 1rem; 
+            border-radius: 8px; 
+            margin: 1rem 0; 
+            display: none;
+        }
+        
+        .success-msg { 
+            background: #d4edda; 
+            color: #155724; 
+        }
+        
+        .error-msg { 
+            background: #f8d7da; 
+            color: #721c24; 
+        }
+        
+        .success-msg.active, .error-msg.active { 
+            display: block; 
+        }
+        
+        .grid-2 { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 1rem; 
+        }
+        
+        .grid-3 { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 1rem; 
+        }
+        
+        .type-tabs { 
+            display: flex; 
+            gap: 0.8rem; 
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+        
+        .type-tab-btn { 
+            flex: 1; 
+            min-width: 140px;
+            padding: 0.9rem; 
+            background: #f0f0f0; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: all 0.3s;
+        }
+        
+        .type-tab-btn.active { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+        }
+        
+        .type-tab-btn.verified.active { 
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%); 
+        }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.6); 
+            padding: 1rem;
+        }
+        
+        .modal-content { 
+            background-color: white; 
+            margin: 3% auto; 
+            padding: 1.5rem; 
+            border: 1px solid #888; 
+            width: 95%; 
+            max-width: 900px; 
+            border-radius: 12px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .close { 
+            color: #aaa; 
+            float: right; 
+            font-size: 2rem; 
+            font-weight: bold; 
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover, .close:focus { 
+            color: #000; 
+        }
+        
+        .payment-status { 
+            display: inline-block; 
+            padding: 0.5rem 1.2rem; 
+            border-radius: 20px; 
+            font-size: 0.85rem; 
+            font-weight: 600; 
+            margin-left: 0.8rem;
+        }
+        
+        .payment-status.configured { 
+            background: #d1fae5; 
+            color: #065f46; 
+        }
+        
+        .payment-status.not-configured { 
+            background: #fee2e2; 
+            color: #b91c1c; 
+        }
+        
+        .vip-utr-item { 
+            background: #f9fafb; 
+            padding: 1.2rem; 
+            margin: 1rem 0; 
+            border-radius: 10px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-left: 5px solid #f59e0b;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .vip-utr-item.inactive { 
+            opacity: 0.55; 
+            border-left-color: #9ca3af; 
+        }
+        
+        .generate-utr-btn { 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+            color: white; 
+            border: none; 
+            padding: 0.8rem 1.2rem; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: transform 0.2s;
+            white-space: nowrap;
+        }
+        
+        .generate-utr-btn:hover { 
+            transform: scale(1.05); 
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 1024px) {
+            .stats-grid { 
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+            }
+        }
+        
         @media (max-width: 768px) {
-            .grid-2, .grid-3 { grid-template-columns: 1fr; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .tabs { flex-direction: column; }
-            .tab-btn { width: 100%; }
-            .container { padding: 20px 12px; }
-            .navbar { padding: 15px 20px; }
-            .card { padding: 20px; }
-            .table th, .table td { padding: 10px; font-size: 0.9em; }
-            .pending-alert, .notification { right: 10px; left: 10px; min-width: auto; padding: 12px 18px; }
+            .navbar { 
+                padding: 1rem; 
+            }
+            
+            .navbar h1 { 
+                font-size: 1.2rem;
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .navbar-buttons {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .logout-btn, .hard-reset-btn {
+                flex: 1;
+                justify-content: center;
+            }
+            
+            .container { 
+                padding: 1rem 0.8rem; 
+            }
+            
+            .stats-grid { 
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.8rem;
+            }
+            
+            .stat-card {
+                padding: 1rem;
+            }
+            
+            .stat-card h3 {
+                font-size: 0.7rem;
+            }
+            
+            .stat-card .value {
+                font-size: 1.5rem;
+            }
+            
+            .tabs { 
+                padding: 0.5rem;
+                gap: 0.4rem;
+            }
+            
+            .tab-btn { 
+                min-width: 100px;
+                padding: 0.7rem 0.6rem;
+                font-size: 0.85rem;
+            }
+            
+            .card { 
+                padding: 1rem; 
+            }
+            
+            .card h2 {
+                font-size: 1.1rem;
+            }
+            
+            .grid-2, .grid-3 { 
+                grid-template-columns: 1fr; 
+            }
+            
+            .table th, .table td { 
+                padding: 0.8rem 0.6rem; 
+                font-size: 0.8rem; 
+            }
+            
+            .pending-alert, .notification { 
+                right: 10px; 
+                left: 10px; 
+                min-width: auto; 
+                padding: 0.9rem 1.2rem;
+                font-size: 0.9rem;
+            }
+            
+            .modal-content {
+                padding: 1rem;
+                margin: 1rem auto;
+            }
+            
+            .vip-utr-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .navbar h1 {
+                font-size: 1rem;
+            }
+            
+            .logout-btn, .hard-reset-btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tab-btn {
+                min-width: 80px;
+                padding: 0.6rem 0.4rem;
+                font-size: 0.75rem;
+            }
+            
+            .btn {
+                padding: 0.7rem 1.2rem;
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="pending-alert" id="pendingAlert">⚠️ <span id="pendingCount">0</span> Pending Orders!</div>
+    <div class="pending-alert" id="pendingAlert">
+        <i class="fas fa-exclamation-triangle"></i> 
+        <span id="pendingCount">0</span> Pending Orders!
+    </div>
+    
     <div class="notification" id="newOrderNotification">
-        <h3 id="notifTitle">🔔 New Order Received!</h3>
+        <h3 id="notifTitle"><i class="fas fa-bell"></i> New Order Received!</h3>
         <p><strong>Type:</strong> <span id="notifType"></span></p>
         <p><strong>Quantity:</strong> <span id="notifQty"></span></p>
         <p><strong>Amount:</strong> ₹<span id="notifAmount"></span></p>
@@ -116,197 +752,305 @@
     </div>
 
     <div class="navbar">
-        <h1>🦸‍♂️ SupermanStore Admin</h1>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+        <h1>
+            <i class="fas fa-rocket"></i> 
+            ReplitStore Admin
+        </h1>
+        <div class="navbar-buttons">
+            <button class="hard-reset-btn" onclick="hardResetDatabase()">
+                <i class="fas fa-trash-restore"></i>
+                Hard Reset
+            </button>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+        </div>
     </div>
 
     <div class="container">
         <div class="stats-grid">
-            <div class="stat-card"><h3>Normal IDs Added Today</h3><div class="value" id="normalTotal">0</div></div>
-            <div class="stat-card" onclick="showAvailableIDs('normal')"><h3>Normal Available</h3><div class="value" id="normalAvailable">0</div></div>
-            <div class="stat-card verified"><h3>Verified IDs Added Today</h3><div class="value" id="verifiedTotal">0</div></div>
-            <div class="stat-card verified" onclick="showAvailableIDs('verified')"><h3>Verified Available</h3><div class="value" id="verifiedAvailable">0</div></div>
-            <div class="stat-card"><h3>Today's Orders (Approved)</h3><div class="value" id="totalOrders">0</div></div>
-            <div class="stat-card"><h3>Today's Revenue</h3><div class="value" id="totalRevenue">₹0</div></div>
-            <div class="stat-card auto"><h3>Auto-Approved Today</h3><div class="value" id="autoApprovedToday">0</div></div>
-            <div class="stat-card pending" onclick="switchTab('orders', event)"><h3>Pending Orders</h3><div class="value" id="pendingOrders">0</div></div>
+            <div class="stat-card">
+                <h3><i class="fas fa-plus-circle"></i> Normal Added Today</h3>
+                <div class="value" id="normalTotal">0</div>
+            </div>
+            <div class="stat-card" onclick="showAvailableIDs('normal')">
+                <h3><i class="fas fa-box"></i> Normal Available</h3>
+                <div class="value" id="normalAvailable">0</div>
+            </div>
+            <div class="stat-card verified">
+                <h3><i class="fas fa-plus-circle"></i> Verified Added Today</h3>
+                <div class="value" id="verifiedTotal">0</div>
+            </div>
+            <div class="stat-card verified" onclick="showAvailableIDs('verified')">
+                <h3><i class="fas fa-check-circle"></i> Verified Available</h3>
+                <div class="value" id="verifiedAvailable">0</div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-shopping-cart"></i> Today's Orders</h3>
+                <div class="value" id="totalOrders">0</div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-rupee-sign"></i> Today's Revenue</h3>
+                <div class="value" id="totalRevenue">₹0</div>
+            </div>
+            <div class="stat-card auto">
+                <h3><i class="fas fa-robot"></i> Auto-Approved</h3>
+                <div class="value" id="autoApprovedToday">0</div>
+            </div>
+            <div class="stat-card pending" onclick="switchTab('orders', event)">
+                <h3><i class="fas fa-clock"></i> Pending Orders</h3>
+                <div class="value" id="pendingOrders">0</div>
+            </div>
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('settings', event)">⚙️ Settings</button>
-            <button class="tab-btn" onclick="switchTab('payment', event)">💳 Payment Gateway</button>
-            <button class="tab-btn" onclick="switchTab('vip', event)">👑 VIP UTRs</button>
-            <button class="tab-btn" onclick="switchTab('ids', event)">📋 IDs Management</button>
-            <button class="tab-btn" onclick="switchTab('orders', event)">🛒 Orders</button>
-            <button class="tab-btn" onclick="switchTab('history', event)">📊 History</button>
+            <button class="tab-btn active" onclick="switchTab('settings', event)">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+            <button class="tab-btn" onclick="switchTab('payment', event)">
+                <i class="fas fa-credit-card"></i> Payment
+            </button>
+            <button class="tab-btn" onclick="switchTab('vip', event)">
+                <i class="fas fa-crown"></i> VIP UTRs
+            </button>
+            <button class="tab-btn" onclick="switchTab('ids', event)">
+                <i class="fas fa-list"></i> IDs
+            </button>
+            <button class="tab-btn" onclick="switchTab('orders', event)">
+                <i class="fas fa-shopping-bag"></i> Orders
+            </button>
+            <button class="tab-btn" onclick="switchTab('history', event)">
+                <i class="fas fa-history"></i> History
+            </button>
         </div>
 
         <div class="tab-content active" id="settingsTab">
             <div class="card">
-                <h2>Price Settings</h2>
+                <h2><i class="fas fa-tag"></i> Price Settings</h2>
                 <div class="success-msg" id="settingsSuccess"></div>
                 <div class="error-msg" id="settingsError"></div>
                 <div class="grid-2">
-                    <div class="form-group"><label>Normal ID Price (₹):</label><input type="number" id="normalPrice" min="1"></div>
-                    <div class="form-group"><label>Verified ID Price (₹):</label><input type="number" id="verifiedPrice" min="1"></div>
+                    <div class="form-group">
+                        <label>Normal ID Price (₹):</label>
+                        <input type="number" id="normalPrice" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Verified ID Price (₹):</label>
+                        <input type="number" id="verifiedPrice" min="1">
+                    </div>
                 </div>
-                <div class="form-group"><label>QR Code URL/Base64:</label><textarea id="qrCode" placeholder="Enter QR code URL or base64 data"></textarea></div>
-                <button class="btn" onclick="updateSettings()">Save Settings</button>
+                <div class="form-group">
+                    <label>QR Code URL/Base64:</label>
+                    <textarea id="qrCode" placeholder="Enter QR code URL or base64 data"></textarea>
+                </div>
+                <button class="btn" onclick="updateSettings()">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
             </div>
 
             <div class="card">
-                <h2>Contact & Payment Settings</h2>
+                <h2><i class="fas fa-phone"></i> Contact & Payment Settings</h2>
                 <div class="success-msg" id="contactSuccess"></div>
                 <div class="error-msg" id="contactError"></div>
                 <div class="grid-3">
                     <div class="form-group">
                         <label>UPI ID:</label>
                         <input type="text" id="upiId" placeholder="yourname@paytm">
-                        <small style="color: #666;">Shown below QR code on payment page</small>
+                        <small style="color: #666;">Shown below QR code</small>
                     </div>
                     <div class="form-group">
                         <label>WhatsApp Link:</label>
                         <input type="text" id="whatsappLink" placeholder="https://wa.me/...">
-                        <small style="color: #666;">Customer support WhatsApp</small>
+                        <small style="color: #666;">Customer support</small>
                     </div>
                     <div class="form-group">
                         <label>Telegram Link:</label>
                         <input type="text" id="telegramLink" placeholder="https://t.me/...">
-                        <small style="color: #666;">Customer support Telegram</small>
+                        <small style="color: #666;">Customer support</small>
                     </div>
                 </div>
-                <button class="btn" onclick="updateContactSettings()">Save Contact Settings</button>
+                <button class="btn" onclick="updateContactSettings()">
+                    <i class="fas fa-save"></i> Save Contact Settings
+                </button>
             </div>
 
             <div class="card">
-                <h2>Announcements / Instructions for Customers</h2>
+                <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
                 <div class="success-msg" id="announceSuccess"></div>
                 <div class="error-msg" id="announceError"></div>
-                <div class="form-group"><label>Message:</label><textarea id="announcement" placeholder="Enter news, updates or instructions here..."></textarea></div>
-                <button class="btn" onclick="updateAnnouncement()">Save Announcement</button>
+                <div class="form-group">
+                    <label>Message:</label>
+                    <textarea id="announcement" placeholder="Enter news, updates or instructions..."></textarea>
+                </div>
+                <button class="btn" onclick="updateAnnouncement()">
+                    <i class="fas fa-save"></i> Save Announcement
+                </button>
             </div>
-            <div class="card"><h2>Current Announcement</h2><p id="currentAnnounce" style="white-space: pre-wrap;">No announcement</p></div>
+            
+            <div class="card">
+                <h2><i class="fas fa-eye"></i> Current Announcement</h2>
+                <p id="currentAnnounce" style="white-space: pre-wrap; color: #666;">No announcement</p>
+            </div>
 
             <div class="card">
-                <h2>Change Admin Credentials</h2>
+                <h2><i class="fas fa-key"></i> Change Admin Credentials</h2>
                 <div class="success-msg" id="credsSuccess"></div>
                 <div class="error-msg" id="credsError"></div>
                 <div class="grid-2">
-                    <div class="form-group"><label>New Username:</label><input type="text" id="newUsername"></div>
-                    <div class="form-group"><label>New Password:</label><input type="password" id="newPassword"></div>
+                    <div class="form-group">
+                        <label>New Username:</label>
+                        <input type="text" id="newUsername">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password:</label>
+                        <input type="password" id="newPassword">
+                    </div>
                 </div>
-                <button class="btn" onclick="changeCredentials()">Update Credentials</button>
+                <button class="btn" onclick="changeCredentials()">
+                    <i class="fas fa-save"></i> Update Credentials
+                </button>
             </div>
         </div>
 
         <div class="tab-content" id="paymentTab">
             <div class="card">
-                <h2>BharatPe Payment Gateway Settings <span class="payment-status" id="paymentStatus">Not Configured</span></h2>
+                <h2>
+                    <i class="fas fa-credit-card"></i> 
+                    BharatPe Payment Gateway 
+                    <span class="payment-status" id="paymentStatus">Not Configured</span>
+                </h2>
                 <div class="success-msg" id="paymentSuccess"></div>
                 <div class="error-msg" id="paymentError"></div>
-                <p style="color: #666; margin-bottom: 20px;">Configure BharatPe API for auto verification.</p>
-                <div class="form-group"><label>BharatPe API Token:</label><input type="text" id="bharatpeToken" placeholder="Enter token"></div>
-                <div class="form-group"><label>BharatPe Merchant ID:</label><input type="text" id="bharatpeMid" placeholder="Enter Merchant ID"></div>
-                <button class="btn" onclick="updatePaymentSettings()">Save Payment Settings</button>
+                <p style="color: #666; margin-bottom: 1.2rem;">Configure BharatPe API for auto verification.</p>
+                <div class="form-group">
+                    <label>BharatPe API Token:</label>
+                    <input type="text" id="bharatpeToken" placeholder="Enter token">
+                </div>
+                <div class="form-group">
+                    <label>BharatPe Merchant ID:</label>
+                    <input type="text" id="bharatpeMid" placeholder="Enter Merchant ID">
+                </div>
+                <button class="btn" onclick="updatePaymentSettings()">
+                    <i class="fas fa-save"></i> Save Payment Settings
+                </button>
             </div>
             <div class="card">
-                <h2>Payment Gateway Status</h2>
+                <h2><i class="fas fa-info-circle"></i> Payment Gateway Status</h2>
                 <p id="paymentStatusDetails" style="color: #666;">Loading...</p>
             </div>
         </div>
 
         <div class="tab-content" id="vipTab">
             <div class="card">
-                <h2>VIP UTR Management 👑</h2>
-                <p style="color: #666; margin-bottom: 15px;">VIP UTRs require manual approval even if payment is verified.</p>
+                <h2><i class="fas fa-crown"></i> VIP UTR Management</h2>
+                <p style="color: #666; margin-bottom: 1rem;">VIP UTRs require manual approval even if payment is verified.</p>
                 <div class="success-msg" id="vipSuccess"></div>
                 <div class="error-msg" id="vipError"></div>
                 <div class="form-group">
                     <label>Add VIP UTR:</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="newVipUtr" placeholder="Enter UTR or generate random" style="flex: 1;">
-                        <button class="generate-utr-btn" onclick="generateAndSetVipUtr()">Generate UTR</button>
-                        <button class="btn" onclick="addVipUtr()">Add VIP UTR</button>
+                    <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                        <input type="text" id="newVipUtr" placeholder="Enter UTR or generate random" style="flex: 1; min-width: 200px;">
+                        <button class="generate-utr-btn" onclick="generateAndSetVipUtr()">
+                            <i class="fas fa-random"></i> Generate
+                        </button>
+                        <button class="btn" onclick="addVipUtr()">
+                            <i class="fas fa-plus"></i> Add UTR
+                        </button>
                     </div>
                 </div>
             </div>
             <div class="card">
-                <h2>VIP UTR List (<span id="vipCount">0</span>)</h2>
+                <h2><i class="fas fa-list"></i> VIP UTR List (<span id="vipCount">0</span>)</h2>
                 <div id="vipUtrList"></div>
             </div>
         </div>
 
         <div class="tab-content" id="idsTab">
             <div class="type-tabs">
-                <button class="type-tab-btn active" onclick="switchIDType('normal', event)">Normal IDs</button>
-                <button class="type-tab-btn verified" onclick="switchIDType('verified', event)">Verified IDs</button>
+                <button class="type-tab-btn active" onclick="switchIDType('normal', event)">
+                    <i class="fas fa-id-card"></i> Normal IDs
+                </button>
+                <button class="type-tab-btn verified" onclick="switchIDType('verified', event)">
+                    <i class="fas fa-check-circle"></i> Verified IDs
+                </button>
             </div>
             <div class="card">
-                <h2 id="addIDTitle">Add New Normal ID</h2>
-                <div class="success-msg" id="idSuccess"></div>
-                <div class="error-msg" id="idError"></div>
-                <div class="grid-2">
-                    <div class="form-group"><label>User ID:</label><input type="text" id="newUserID"></div>
-                    <div class="form-group"><label>Password:</label><input type="text" id="newPassword2"></div>
-                    <div class="form-group"><label>Email (Optional):</label><input type="email" id="newEmail"></div>
-                    <div class="form-group"><label>Email Password (Optional):</label><input type="text" id="newEmailPassword"></div>
-                </div>
-                <button class="btn" onclick="addID()">Add ID</button>
-            </div>
-            <div class="card">
-                <h2 id="bulkAddTitle">Bulk Add Normal IDs</h2>
+                <h2 id="bulkAddTitle"><i class="fas fa-layer-group"></i> Bulk Add Normal IDs</h2>
                 <div class="success-msg" id="bulkSuccess"></div>
                 <div class="error-msg" id="bulkError"></div>
-                <div class="form-group"><label>User IDs (One per line):</label><textarea id="bulkUserids" placeholder="one userid per line"></textarea></div>
-                <div class="grid-2">
-                    <div class="form-group"><label>Common Password:</label><input type="text" id="bulkPassword"></div>
-                    <div class="form-group"><label>Common Email (Optional):</label><input type="email" id="bulkEmail"></div>
-                    <div class="form-group"><label>Common Email Password (Optional):</label><input type="text" id="bulkEmailPass"></div>
+                <p style="color: #666; margin-bottom: 1rem;">
+                    <i class="fas fa-info-circle"></i> 
+                    Add multiple IDs at once. For single ID, just enter one line.
+                </p>
+                <div class="form-group">
+                    <label>User IDs (One per line):</label>
+                    <textarea id="bulkUserids" placeholder="Enter User IDs (one per line)&#10;&#10;Examples:&#10;userid1&#10;userid2&#10;userid3" style="min-height: 150px;"></textarea>
                 </div>
-                <button class="btn" onclick="bulkAddIDs()">Bulk Add</button>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Common Password:</label>
+                        <input type="text" id="bulkPassword" placeholder="Enter common password for all IDs">
+                    </div>
+                    <div class="form-group">
+                        <label>Common Email (Optional):</label>
+                        <input type="email" id="bulkEmail" placeholder="email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Common Email Password (Optional):</label>
+                        <input type="text" id="bulkEmailPass" placeholder="Email password">
+                    </div>
+                </div>
+                <button class="btn" onclick="bulkAddIDs()">
+                    <i class="fas fa-upload"></i> Add IDs
+                </button>
             </div>
         </div>
 
         <div class="tab-content" id="ordersTab">
             <div class="card">
-                <h2>Today's Orders</h2>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Type</th>
-                            <th>Date</th>
-                            <th>Quantity</th>
-                            <th>Amount</th>
-                            <th>UTR</th>
-                            <th>Screenshot</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTableBody"></tbody>
-                </table>
+                <h2><i class="fas fa-shopping-cart"></i> Today's Orders</h2>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Qty</th>
+                                <th>Amount</th>
+                                <th>UTR</th>
+                                <th>Screenshot</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div class="tab-content" id="historyTab">
             <div class="card">
-                <h2>All Orders History</h2>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Type</th>
-                            <th>Date</th>
-                            <th>Quantity</th>
-                            <th>Amount</th>
-                            <th>UTR</th>
-                            <th>Screenshot</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTableBody"></tbody>
-                </table>
+                <h2><i class="fas fa-history"></i> All Orders History</h2>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Qty</th>
+                                <th>Amount</th>
+                                <th>UTR</th>
+                                <th>Screenshot</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -314,17 +1058,26 @@
     <div id="modal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">×</span>
-            <h2 id="modalTitle">Available IDs</h2>
-            <table class="table">
-                <thead>
-                    <tr><th>User ID</th><th>Password</th><th>Email</th><th>Email Pass</th><th>Status</th><th>Action</th></tr>
-                </thead>
-                <tbody id="modalBody"></tbody>
-            </table>
+            <h2 id="modalTitle"><i class="fas fa-box-open"></i> Available IDs</h2>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Password</th>
+                            <th>Email</th>
+                            <th>Email Pass</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
+// Same JavaScript as before but updated for ReplitStore...
 let currentIDType = 'normal';
 let knownOrderIds = new Set();
 let isFirstLoad = true;
@@ -365,7 +1118,7 @@ function playBeepSound() {
 function showFullScreenNotification(order) {
     const n = document.getElementById('newOrderNotification');
     const isVip = !!order.is_vip;
-    document.getElementById('notifTitle').textContent = isVip ? '👑 VIP Order - Manual Approval Required!' : '🔔 New Order!';
+    document.getElementById('notifTitle').innerHTML = isVip ? '<i class="fas fa-crown"></i> VIP Order - Manual Approval Required!' : '<i class="fas fa-bell"></i> New Order!';
     document.getElementById('notifExtra').textContent = isVip ? '⚠️ VIP UTR detected - Auto-approval disabled' : '';
     document.getElementById('notifType').textContent = order.type === 'normal' ? 'Normal ID' : 'Verified ID';
     document.getElementById('notifQty').textContent = order.quantity;
@@ -402,8 +1155,7 @@ function switchIDType(type, e) {
     currentIDType = type;
     document.querySelectorAll('.type-tab-btn').forEach(b => b.classList.remove('active'));
     if (e) e.currentTarget.classList.add('active');
-    document.getElementById('addIDTitle').textContent = type === 'normal' ? 'Add New Normal ID' : 'Add New Verified ID';
-    document.getElementById('bulkAddTitle').textContent = type === 'normal' ? 'Bulk Add Normal IDs' : 'Bulk Add Verified IDs';
+    document.getElementById('bulkAddTitle').innerHTML = type === 'normal' ? '<i class="fas fa-layer-group"></i> Bulk Add Normal IDs' : '<i class="fas fa-layer-group"></i> Bulk Add Verified IDs';
 }
 
 async function apiCall(url, method = 'GET', body = null) {
@@ -412,6 +1164,49 @@ async function apiCall(url, method = 'GET', body = null) {
     const res = await fetch(url, opts);
     if (!res.ok) throw new Error(`API error ${res.status}`);
     return res.json();
+}
+
+async function hardResetDatabase() {
+    const confirmMsg = '⚠️ CRITICAL WARNING ⚠️\n\n' +
+                      'This will DELETE ALL DATA:\n' +
+                      '• All IDs (Normal & Verified)\n' +
+                      '• All Orders\n' +
+                      '• All VIP UTRs\n' +
+                      '• All Used UTRs\n' +
+                      '• Settings will remain\n\n' +
+                      'Type "DELETE ALL" to confirm:';
+    
+    const userInput = prompt(confirmMsg);
+    
+    if (userInput !== 'DELETE ALL') {
+        alert('Reset cancelled. Database not affected.');
+        return;
+    }
+    
+    const finalConfirm = confirm('⚠️ FINAL WARNING ⚠️\n\nAre you ABSOLUTELY SURE?\n\nThis action CANNOT be undone!');
+    
+    if (!finalConfirm) {
+        alert('Reset cancelled.');
+        return;
+    }
+    
+    try {
+        const result = await apiCall('/api/admin/hard-reset', 'POST');
+        if (result.success) {
+            alert('✅ Database has been reset successfully!\n\n' +
+                  'Deleted:\n' +
+                  `• ${result.deleted.normal_ids} Normal IDs\n` +
+                  `• ${result.deleted.verified_ids} Verified IDs\n` +
+                  `• ${result.deleted.orders} Orders\n` +
+                  `• ${result.deleted.used_utrs} Used UTRs\n` +
+                  `• ${result.deleted.vip_utrs} VIP UTRs`);
+            location.reload();
+        } else {
+            alert('❌ Reset failed: ' + result.error);
+        }
+    } catch (e) {
+        alert('❌ Error during reset: ' + e.message);
+    }
 }
 
 async function loadStats() {
@@ -580,7 +1375,7 @@ async function loadVipUtrs() {
             <div class="vip-utr-item ${item.active ? '' : 'inactive'}">
                 <div>
                     <strong onclick="copyToClipboard('${item.utr}')" style="cursor: pointer; font-size: 1.1em; user-select: all; font-family: monospace;">${item.utr}</strong>
-                    <button class="copy-btn" onclick="copyToClipboard('${item.utr}')">Copy</button>
+                    <button class="copy-btn" onclick="copyToClipboard('${item.utr}')"><i class="fas fa-copy"></i> Copy</button>
                     <br>
                     <small style="color: #666;">Added: ${new Date(item.added_date).toLocaleString('en-IN')}</small>
                 </div>
@@ -684,39 +1479,6 @@ async function changeCredentials() {
     }
 }
 
-async function addID() {
-    const s = document.getElementById('idSuccess');
-    const e = document.getElementById('idError');
-    s.classList.remove('active'); e.classList.remove('active');
-    const userid = document.getElementById('newUserID').value.trim();
-    const password = document.getElementById('newPassword2').value.trim();
-    if (!userid || !password) {
-        e.textContent = 'User ID and Password required'; 
-        e.classList.add('active');
-        return;
-    }
-    try {
-        await apiCall('/api/admin/ids', 'POST', {
-            type: currentIDType,
-            userid,
-            password,
-            email: document.getElementById('newEmail').value.trim(),
-            email_password: document.getElementById('newEmailPassword').value.trim()
-        });
-        s.textContent = 'ID added successfully'; 
-        s.classList.add('active');
-        setTimeout(() => s.classList.remove('active'), 3000);
-        document.getElementById('newUserID').value = '';
-        document.getElementById('newPassword2').value = '';
-        document.getElementById('newEmail').value = '';
-        document.getElementById('newEmailPassword').value = '';
-        loadStats();
-    } catch (err) {
-        e.textContent = 'Error: ' + err.message; 
-        e.classList.add('active');
-    }
-}
-
 async function bulkAddIDs() {
     const s = document.getElementById('bulkSuccess');
     const e = document.getElementById('bulkError');
@@ -755,17 +1517,24 @@ async function showAvailableIDs(type) {
         const data = await apiCall(`/api/admin/ids/${type}`);
         const modal = document.getElementById('modal');
         const tbody = document.getElementById('modalBody');
-        document.getElementById('modalTitle').textContent = `Available ${type === 'normal' ? 'Normal' : 'Verified'} IDs`;
-        tbody.innerHTML = data.ids.map(id => `
-            <tr>
-                <td>${id.userid}</td>
-                <td>${id.password}</td>
-                <td>${id.email || 'N/A'}</td>
-                <td>${id.email_password || 'N/A'}</td>
-                <td><span class="badge ${id.sold ? 'badge-rejected' : 'badge-success'}">${id.sold ? 'Sold' : 'Available'}</span></td>
-                <td>${!id.sold ? `<button class="btn-small btn-reject" onclick="deleteSingleID('${id._id}', '${type}')">Delete</button>` : ''}</td>
-            </tr>
-        `).join('');
+        document.getElementById('modalTitle').innerHTML = `<i class="fas fa-box-open"></i> Available ${type === 'normal' ? 'Normal' : 'Verified'} IDs`;
+        
+        // Filter to show only available (not sold) IDs
+        const availableIds = data.ids.filter(id => !id.sold);
+        
+        if (availableIds.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #666;">No available IDs</td></tr>';
+        } else {
+            tbody.innerHTML = availableIds.map(id => `
+                <tr>
+                    <td>${id.userid}</td>
+                    <td>${id.password}</td>
+                    <td>${id.email || 'N/A'}</td>
+                    <td>${id.email_password || 'N/A'}</td>
+                    <td><button class="btn-small btn-reject" onclick="deleteSingleID('${id._id}', '${type}')"><i class="fas fa-trash"></i> Delete</button></td>
+                </tr>
+            `).join('');
+        }
         modal.style.display = 'block';
     } catch (e) {
         alert('Error: ' + e.message);
@@ -822,8 +1591,8 @@ async function loadOrders() {
                 statusBadge = '<span class="badge badge-pending">Pending</span>';
                 if (order.is_vip) statusBadge += ' <span class="badge badge-vip">VIP</span>';
                 actions = `
-                    <button class="btn-approve" onclick="approveOrder('${order._id}', ${order.amount})">Approve</button>
-                    <button class="btn-reject" onclick="rejectOrder('${order._id}')">Reject</button>
+                    <button class="btn-approve" onclick="approveOrder('${order._id}', ${order.amount})"><i class="fas fa-check"></i> Approve</button>
+                    <button class="btn-reject" onclick="rejectOrder('${order._id}')"><i class="fas fa-times"></i> Reject</button>
                 `;
             } else if (order.status === 'approved') {
                 statusBadge = '<span class="badge badge-approved">Approved</span>';
@@ -840,7 +1609,7 @@ async function loadOrders() {
                 <td>${date}</td>
                 <td>${order.quantity}</td>
                 <td id="amount-${order._id}">₹${order.amount}${order.status === 'pending' ? `<button class="copy-btn" onclick="editAmount('${order._id}', ${order.amount}, '${order.type}')">Edit</button>` : ''}</td>
-                <td class="utr-cell" onclick="copyUTR('${order.utr}')">${order.utr} <button class="copy-btn">Copy</button></td>
+                <td class="utr-cell" onclick="copyUTR('${order.utr}')">${order.utr} <button class="copy-btn"><i class="fas fa-copy"></i></button></td>
                 <td>${screenshot}</td>
                 <td>${statusBadge}</td>
                 <td>${actions}</td>
@@ -935,7 +1704,7 @@ async function loadHistory() {
                 <td>${date}</td>
                 <td>${order.quantity}</td>
                 <td>₹${order.amount}</td>
-                <td class="utr-cell" onclick="copyUTR('${order.utr}')">${order.utr} <button class="copy-btn">Copy</button></td>
+                <td class="utr-cell" onclick="copyUTR('${order.utr}')">${order.utr} <button class="copy-btn"><i class="fas fa-copy"></i></button></td>
                 <td>${screenshot}</td>
                 <td>${statusBadge}</td>
             `;

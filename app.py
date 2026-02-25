@@ -36,8 +36,8 @@ def init_config():
                 'bharatpe_mid': '',
                 'upi_id': '',
                 'whatsapp_link': 'https://wa.link/soyd4g',
-                'telegram_link': 'https://l1nq.link/?telegram=SUPERMAN_ADMIN1',
-                'vip_utrs': []  # Initialize empty VIP UTR list
+                'telegram_link': 'https://t.me/replitstore',
+                'vip_utrs': []
             }
             config_collection.insert_one(default_config)
             print("✅ Default config created")
@@ -81,7 +81,7 @@ def admin_login():
         return jsonify({'success': False, 'error': 'Invalid credentials'})
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))
-    return render_template('admin_login.html')
+    return render_template('login.html')
 
 @app.route('/admin/dashboard')
 @admin_required
@@ -120,6 +120,7 @@ def admin_config():
 @app.route('/api/admin/ids', methods=['POST'])
 @admin_required
 def admin_ids_add():
+    """Single ID add (kept for API compatibility but not used in UI)"""
     data = request.json
     id_type = data.get('type', 'normal')
     
@@ -176,17 +177,19 @@ def bulk_add_ids():
     
     docs = []
     for userid in userids:
-        docs.append({
-            'userid': userid.strip(),
-            'password': password,
-            'email': email,
-            'email_password': email_password,
-            'sold': False,
-            'added_date': datetime.now()
-        })
+        if userid.strip():  # Only add non-empty user IDs
+            docs.append({
+                'userid': userid.strip(),
+                'password': password,
+                'email': email,
+                'email_password': email_password,
+                'sold': False,
+                'added_date': datetime.now()
+            })
     
     if docs:
         coll.insert_many(docs)
+        print(f"✅ Bulk added {len(docs)} {id_type} IDs")
     
     return jsonify({'success': True, 'added': len(docs)})
 
@@ -197,8 +200,12 @@ def delete_id(id_id):
         # Try both collections
         res1 = normal_ids_collection.delete_one({'_id': ObjectId(id_id)})
         res2 = verified_ids_collection.delete_one({'_id': ObjectId(id_id)})
-        return jsonify({'success': (res1.deleted_count + res2.deleted_count) > 0})
-    except:
+        deleted = (res1.deleted_count + res2.deleted_count) > 0
+        if deleted:
+            print(f"🗑️ Deleted ID: {id_id}")
+        return jsonify({'success': deleted})
+    except Exception as e:
+        print(f"❌ Delete ID error: {e}")
         return jsonify({'success': False})
 
 @app.route('/api/admin/orders')
@@ -294,7 +301,8 @@ def reject_order(order_id):
             print(f"❌ Order {order_id} rejected")
         
         return jsonify({'success': res.modified_count > 0})
-    except:
+    except Exception as e:
+        print(f"❌ Reject error: {e}")
         return jsonify({'success': False})
 
 @app.route('/api/admin/stats')
@@ -335,14 +343,75 @@ def admin_stats():
         'auto_approved_today': auto_approved_count
     })
 
+@app.route('/api/admin/hard-reset', methods=['POST'])
+@admin_required
+def hard_reset():
+    """
+    DANGER: Deletes ALL data except config settings
+    """
+    try:
+        print("\n" + "="*50)
+        print("⚠️ HARD RESET INITIATED")
+        print("="*50)
+        
+        # Count before deletion
+        normal_count = normal_ids_collection.count_documents({})
+        verified_count = verified_ids_collection.count_documents({})
+        orders_count = orders_collection.count_documents({})
+        used_utrs_count = used_utrs_collection.count_documents({})
+        
+        # Get VIP UTRs count before clearing
+        config = config_collection.find_one({})
+        vip_count = len(config.get('vip_utrs', []))
+        
+        print(f"📊 Current Data:")
+        print(f"   Normal IDs: {normal_count}")
+        print(f"   Verified IDs: {verified_count}")
+        print(f"   Orders: {orders_count}")
+        print(f"   Used UTRs: {used_utrs_count}")
+        print(f"   VIP UTRs: {vip_count}")
+        
+        # Delete all data
+        normal_ids_collection.delete_many({})
+        verified_ids_collection.delete_many({})
+        orders_collection.delete_many({})
+        used_utrs_collection.delete_many({})
+        
+        # Clear VIP UTRs from config
+        config_collection.update_one(
+            {},
+            {'$set': {'vip_utrs': []}}
+        )
+        
+        print("\n✅ Database Reset Complete!")
+        print("="*50 + "\n")
+        
+        return jsonify({
+            'success': True,
+            'deleted': {
+                'normal_ids': normal_count,
+                'verified_ids': verified_count,
+                'orders': orders_count,
+                'used_utrs': used_utrs_count,
+                'vip_utrs': vip_count
+            }
+        })
+    except Exception as e:
+        print(f"❌ Hard reset error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # ====================== MAIN ======================
 if __name__ == '__main__':
     os.makedirs('templates', exist_ok=True)
     print("\n" + "="*50)
-    print("🚀 SupermanStore Admin Panel Starting...")
+    print("🚀 ReplitStore Admin Panel Starting...")
     print("="*50)
     print(f"🌐 Admin Panel: http://localhost:5001/")
     print(f"⚡ Auto Payment: ENABLED")
     print(f"👑 VIP UTR: ENABLED")
+    print(f"🗑️ Hard Reset: AVAILABLE")
     print("="*50 + "\n")
     app.run(debug=True, host='0.0.0.0', port=5001)
