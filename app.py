@@ -5,6 +5,9 @@ from datetime import datetime, timedelta, date
 from functools import wraps
 import os
 import sys
+import gzip
+import time
+import threading
 from bson.objectid import ObjectId
 
 # Windows consoles default to cp1252 and crash on emoji log output.
@@ -16,11 +19,19 @@ except Exception:
 
 app = Flask(__name__)
 app.secret_key = 'admin-secret-key-change-this-to-something-secure'
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000
 CORS(app)
 
 # MongoDB Connection
 MONGO_URI = "mongodb+srv://terajoginderbhai123_db_user:llhBLaZ6AjqP5dVU@cluster0.d7bjhgb.mongodb.net/?retryWrites=true&w=majority"
-client = MongoClient(MONGO_URI)
+client = MongoClient(
+    MONGO_URI,
+    maxPoolSize=50,
+    serverSelectionTimeoutMS=5000,
+    connectTimeoutMS=5000,
+    socketTimeoutMS=15000,
+    appname='replitstore-admin',
+)
 db = client['repltjimmy']
 
 # Collections
@@ -29,6 +40,51 @@ orders_collection = db['orders']
 normal_ids_collection = db['normal_ids']
 verified_ids_collection = db['verified_ids']
 used_utrs_collection = db['used_utrs']
+
+# ====================== PERFORMANCE ======================
+_COMPRESSIBLE = {
+    'text/html', 'text/css', 'application/json', 'application/javascript',
+    'text/javascript', 'image/svg+xml', 'text/plain', 'application/xml',
+}
+
+@app.after_request
+def gzip_response(response):
+    """Compress HTML/JSON responses (dashboard 62KB -> ~11KB)."""
+    try:
+        if response.direct_passthrough or not (200 <= response.status_code < 300):
+            return response
+        if response.headers.get('Content-Encoding'):
+            return response
+        if 'gzip' not in (request.headers.get('Accept-Encoding') or '').lower():
+            return response
+        if response.mimetype not in _COMPRESSIBLE:
+            return response
+        data = response.get_data()
+        if len(data) < 500:
+            return response
+        compressed = gzip.compress(data, compresslevel=6)
+        if len(compressed) >= len(data):
+            return response
+        response.set_data(compressed)
+        response.headers['Content-Encoding'] = 'gzip'
+        response.headers['Content-Length'] = str(len(compressed))
+        response.headers.add('Vary', 'Accept-Encoding')
+    except Exception:
+        pass
+    return response
+
+def _ensure_indexes():
+    try:
+        normal_ids_collection.create_index([('sold', 1)])
+        verified_ids_collection.create_index([('sold', 1)])
+        orders_collection.create_index([('utr', 1)])
+        orders_collection.create_index([('status', 1), ('date', -1)])
+        orders_collection.create_index([('date', -1)])
+        used_utrs_collection.create_index([('utr', 1)])
+    except Exception as e:
+        print(f"index error: {e}")
+
+threading.Thread(target=_ensure_indexes, daemon=True).start()
 
 DEFAULT_CONFIG = {
     'normal_price': 200,
@@ -107,7 +163,9 @@ def admin_login():
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    return render_template('admin_dashboard.html')
+    response = make_response(render_template('admin_dashboard.html'))
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 @app.route('/admin/logout')
 def admin_logout():
@@ -232,15 +290,21 @@ def delete_id(id_id):
 @app.route('/api/admin/orders')
 @admin_required
 def admin_orders():
-    # Sort by date DESC so latest orders come first
-    orders = list(orders_collection.find({}).sort('date', -1))
+    try:
+        limit = min(int(request.args.get('limit', 100)), 500)
+    except (TypeError, ValueError):
+        limit = 100
+    # Sort by date DESC so latest orders come first, and only fetch what the UI shows
+    orders = list(orders_collection.find({}).sort('date', -1).limit(limit))
     for o in orders:
         o['_id'] = str(o['_id'])
         o['date'] = o['date'].isoformat() if isinstance(o.get('date'), datetime) else o.get('date')
         o.setdefault('status', 'pending')
         o.setdefault('auto_approved', False)
         o.setdefault('is_vip', False)
-    return jsonify(orders)
+    response = jsonify(orders)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 @app.route('/api/admin/orders/<order_id>/approve', methods=['POST'])
 @admin_required
@@ -326,34 +390,111 @@ def reject_order(order_id):
         print(f"❌ Reject error: {e}")
         return jsonify({'success': False})
 
+_stats_cache = {'data': None, 'ts': 0.0}
+STATS_CACHE_TTL = 3  # seconds
+
 @app.route('/api/admin/stats')
 @admin_required
 def admin_stats():
+    now = time.time()
+    if _stats_cache['data'] is not None and (now - _stats_cache['ts']) < STATS_CACHE_TTL:
+        response = jsonify(_stats_cache['data'])
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
     today_start = datetime.combine(date.today(), datetime.min.time())
     today_end = datetime.combine(date.today(), datetime.max.time())
 
-    normal_added_today = normal_ids_collection.count_documents({'added_date': {'$gte': today_start}})
-    verified_added_today = verified_ids_collection.count_documents({'added_date': {'$gte': today_start}})
+    normal_added_today = normal_available = 0
+    verified_added_today = verified_available = 0
 
-    normal_available = normal_ids_collection.count_documents({'sold': False})
-    verified_available = verified_ids_collection.count_documents({'sold': False})
+    # One DB round trip for all ID counters
+    try:
+        rows = list(normal_ids_collection.aggregate([
+            {'$group': {
+                '_id': None,
+                'available': {'$sum': {'$cond': [{'$eq': ['$sold', False]}, 1, 0]}},
+                'added_today': {'$sum': {'$cond': [{'$gte': ['$added_date', today_start]}, 1, 0]}},
+            }},
+            {'$unionWith': {
+                'coll': 'verified_ids',
+                'pipeline': [
+                    {'$group': {
+                        '_id': 'verified',
+                        'available': {'$sum': {'$cond': [{'$eq': ['$sold', False]}, 1, 0]}},
+                        'added_today': {'$sum': {'$cond': [{'$gte': ['$added_date', today_start]}, 1, 0]}},
+                    }},
+                ],
+            }},
+        ], maxTimeMS=4000))
+        for row in rows:
+            if row.get('_id') == 'verified':
+                verified_available = row.get('available', 0)
+                verified_added_today = row.get('added_today', 0)
+            else:
+                normal_available = row.get('available', 0)
+                normal_added_today = row.get('added_today', 0)
+    except Exception as e:
+        print(f"❌ ID stats error: {e}")
+        normal_added_today = normal_ids_collection.count_documents({'added_date': {'$gte': today_start}})
+        verified_added_today = verified_ids_collection.count_documents({'added_date': {'$gte': today_start}})
+        normal_available = normal_ids_collection.count_documents({'sold': False})
+        verified_available = verified_ids_collection.count_documents({'sold': False})
 
-    pending_orders_count = orders_collection.count_documents({'status': 'pending'})
+    pending_orders_count = 0
+    today_orders_count = 0
+    today_revenue = 0
+    auto_approved_count = 0
 
-    today_approved_orders = list(orders_collection.find({
-        'date': {'$gte': today_start, '$lte': today_end},
-        'status': 'approved'
-    }))
-    
-    today_orders_count = len(today_approved_orders)
-    today_revenue = sum(o.get('amount', 0) for o in today_approved_orders)
-    
-    auto_approved_count = orders_collection.count_documents({
-        'date': {'$gte': today_start, '$lte': today_end},
-        'auto_approved': True
-    })
+    # One DB round trip for all order counters
+    try:
+        rows = list(orders_collection.aggregate([
+            {'$facet': {
+                'pending': [
+                    {'$match': {'status': 'pending'}},
+                    {'$count': 'n'},
+                ],
+                'today': [
+                    {'$match': {'date': {'$gte': today_start, '$lte': today_end}, 'status': 'approved'}},
+                    {'$group': {
+                        '_id': None,
+                        'count': {'$sum': 1},
+                        'revenue': {'$sum': {'$ifNull': ['$amount', 0]}},
+                    }},
+                ],
+                'auto': [
+                    {'$match': {'date': {'$gte': today_start, '$lte': today_end}, 'auto_approved': True}},
+                    {'$count': 'n'},
+                ],
+            }},
+        ], maxTimeMS=4000))
+        facet = rows[0] if rows else {}
 
-    return jsonify({
+        pending_rows = facet.get('pending') or []
+        pending_orders_count = pending_rows[0].get('n', 0) if pending_rows else 0
+
+        auto_rows = facet.get('auto') or []
+        auto_approved_count = auto_rows[0].get('n', 0) if auto_rows else 0
+
+        today_rows = facet.get('today') or []
+        if today_rows:
+            today_orders_count = today_rows[0].get('count', 0)
+            today_revenue = today_rows[0].get('revenue', 0)
+    except Exception as e:
+        print(f"❌ Order stats error: {e}")
+        pending_orders_count = orders_collection.count_documents({'status': 'pending'})
+        today_approved_orders = list(orders_collection.find({
+            'date': {'$gte': today_start, '$lte': today_end},
+            'status': 'approved'
+        }))
+        today_orders_count = len(today_approved_orders)
+        today_revenue = sum(o.get('amount', 0) for o in today_approved_orders)
+        auto_approved_count = orders_collection.count_documents({
+            'date': {'$gte': today_start, '$lte': today_end},
+            'auto_approved': True
+        })
+
+    payload = {
         'normal_total': normal_added_today,
         'normal_available': normal_available,
         'verified_total': verified_added_today,
@@ -362,7 +503,14 @@ def admin_stats():
         'total_revenue': today_revenue,
         'pending_orders': pending_orders_count,
         'auto_approved_today': auto_approved_count
-    })
+    }
+
+    _stats_cache['data'] = payload
+    _stats_cache['ts'] = now
+
+    response = jsonify(payload)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 @app.route('/api/admin/hard-reset', methods=['POST'])
 @admin_required
