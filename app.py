@@ -4,14 +4,22 @@ from pymongo import MongoClient
 from datetime import datetime, timedelta, date
 from functools import wraps
 import os
+import sys
 from bson.objectid import ObjectId
+
+# Windows consoles default to cp1252 and crash on emoji log output.
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 
 app = Flask(__name__)
 app.secret_key = 'admin-secret-key-change-this-to-something-secure'
 CORS(app)
 
 # MongoDB Connection
-MONGO_URI = "mongodb+srv://suresh9576sharma_db_user:dn3hXtnCq5NmLGXv@replit0.djpxcq9.mongodb.net/?appName=replit0"
+MONGO_URI = "mongodb+srv://terajoginderbhai123_db_user:llhBLaZ6AjqP5dVU@cluster0.d7bjhgb.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(MONGO_URI)
 db = client['repltjimmy']
 
@@ -22,25 +30,36 @@ normal_ids_collection = db['normal_ids']
 verified_ids_collection = db['verified_ids']
 used_utrs_collection = db['used_utrs']
 
+DEFAULT_CONFIG = {
+    'normal_price': 200,
+    'verified_price': 400,
+    'qr_code': '',
+    'admin_username': 'Kundan',
+    'admin_password': 'Kundan@123',
+    'announcement': '',
+    'bharatpe_token': '',
+    'bharatpe_mid': '',
+    'upi_id': '',
+    'whatsapp_link': 'https://wa.link/soyd4g',
+    'telegram_link': 'https://t.me/replitstore',
+    'vip_utrs': []
+}
+
 def init_config():
     try:
-        if config_collection.count_documents({}) == 0:
-            default_config = {
-                'normal_price': 200,
-                'verified_price': 400,
-                'qr_code': '',
-                'admin_username': 'jimmy',
-                'admin_password': 'jimmy123',
-                'announcement': '',
-                'bharatpe_token': '',
-                'bharatpe_mid': '',
-                'upi_id': '',
-                'whatsapp_link': 'https://wa.link/soyd4g',
-                'telegram_link': 'https://t.me/replitstore',
-                'vip_utrs': []
-            }
-            config_collection.insert_one(default_config)
+        config = config_collection.find_one({})
+        if config is None:
+            config_collection.insert_one(dict(DEFAULT_CONFIG))
             print("✅ Default config created")
+            return
+
+        # Older/copied config documents may be missing keys (especially
+        # admin_username / admin_password). Fill only the missing ones so
+        # existing custom settings are never overwritten.
+        missing = {k: v for k, v in DEFAULT_CONFIG.items() if k not in config}
+        if missing:
+            config_collection.update_one({'_id': config['_id']}, {'$set': missing})
+            print(f"✅ Filled missing config keys: {', '.join(missing)}")
     except Exception as e:
         print(f"❌ Config init error: {e}")
 
@@ -71,11 +90,13 @@ def index():
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
-        data = request.json
+        data = request.json or {}
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
-        config = config_collection.find_one({})
-        if config and username == config.get('admin_username') and password == config.get('admin_password'):
+        config = config_collection.find_one({}) or {}
+        admin_username = (config.get('admin_username') or DEFAULT_CONFIG['admin_username']).strip()
+        admin_password = config.get('admin_password') or DEFAULT_CONFIG['admin_password']
+        if username == admin_username and password == admin_password:
             session['admin_logged_in'] = True
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'Invalid credentials'})
